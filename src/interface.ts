@@ -11,5 +11,25 @@ export interface CDNPluginOptions {
   modules?: Array<TrackModule>
   preset?: PresetDomain
   logInfo?: 'silent' | 'info'
-  transform?: (data: any) => any
 }
+
+export type ScriptKeyWord = Pick<
+  HTMLScriptElement,
+  'async' | 'charset' | 'crossOrigin' | 'defer' | 'integrity' | 'noModule' | 'nonce' | 'referrerPolicy' | 'type'
+>
+
+export type LinkKeyWord = Pick<
+  HTMLLinkElement,
+  | 'as'
+  | 'crossOrigin'
+  | 'href'
+  | 'hreflang'
+  | 'imageSizes'
+  | 'imageSrcset'
+  | 'integrity'
+  | 'media'
+  | 'referrerPolicy'
+  | 'rel'
+  | 'title'
+  | 'type'
+>
