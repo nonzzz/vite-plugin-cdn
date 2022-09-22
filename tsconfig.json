@@ -8,7 +8,7 @@
     "noImplicitAny": true,
     "moduleResolution": "Node",
     "esModuleInterop": true,
-    "module": "ESNext"
+    "module": "CommonJS"
   },
   "include": ["src/**/*"]
 }

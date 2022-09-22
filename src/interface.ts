@@ -1,13 +1,15 @@
 export interface TrackModule {
-  name: string;
-  global: string;
-  spare?: Array<string> | string;
+  name: string
+  global: string
+  spare?: Array<string> | string
 }
 
-export type PresetDomain = "auto" | "jsdelivr" | "unpkg" | false;
+export type PresetDomain = 'auto' | 'jsdelivr' | 'unpkg' | false
 
 export interface CDNPluginOptions {
-  isProduction?: boolean;
-  modules?: Array<TrackModule>;
-  preset?: PresetDomain;
+  isProduction?: boolean
+  modules?: Array<TrackModule>
+  preset?: PresetDomain
+  logInfo?: 'silent' | 'info'
+  transform?: (data: any) => any
 }
