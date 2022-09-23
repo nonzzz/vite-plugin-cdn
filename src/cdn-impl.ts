@@ -7,7 +7,8 @@ import type {
   PresetDomain,
   ScriptAttributes,
   LinkAttrobites,
-  Serialization
+  Serialization,
+  Transformed
 } from './interface'
 
 // Because vite don't expose rollupOptions declare. So we need to do this.
@@ -33,7 +34,7 @@ const serialize = (struct: Map<string, Required<TrackModule>>) => {
     } as Pick<Serialization, 'type' | 'tag'>
   }
 
-  const parserd: Array<(ScriptAttributes & Serialization) | (LinkAttrobites & Serialization)> = []
+  const parserd: Transformed = []
   struct.forEach(({ spare }) => {
     if (Array.isArray(spare)) {
       spare.forEach((sp) => {
@@ -164,6 +165,7 @@ export const cdn = (options: CDNPluginOptions): Plugin => {
     transformIndexHtml(raw: string) {
       if (!isProduction) return
       const metas = serialize(finder)
+      if (options.transform) options.transform(metas)
       const tpl = toString(metas)
       const window = new Window()
       const { document } = window

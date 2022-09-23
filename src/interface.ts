@@ -6,11 +6,22 @@ export interface TrackModule {
 
 export type PresetDomain = 'auto' | 'jsdelivr' | 'unpkg' | false
 
+export type Transformed = Array<
+  | (ScriptAttributes &
+      Omit<Serialization, 'tag'> & {
+        tag: 'script'
+      })
+  | (LinkAttrobites &
+      Omit<Serialization, 'tag'> & {
+        tag: 'link'
+      })
+>
 export interface CDNPluginOptions {
   isProduction?: boolean
   modules?: Array<TrackModule>
   preset?: PresetDomain
   logInfo?: 'silent' | 'info'
+  transform?: (meta: Transformed) => void
 }
 
 export type ScriptAttributes = Partial<
