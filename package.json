@@ -37,5 +37,8 @@
     "require": [
       "ts-node/register"
     ]
+  },
+  "dependencies": {
+    "happy-dom": "^6.0.4"
   }
 }

@@ -1,7 +1,14 @@
+import { Window } from 'happy-dom'
 import { tryRequireModule } from './shared'
-
 import type { Plugin, UserConfig, BuildOptions } from 'vite'
-import type { TrackModule, CDNPluginOptions, PresetDomain } from './interface'
+import type {
+  TrackModule,
+  CDNPluginOptions,
+  PresetDomain,
+  ScriptAttributes,
+  LinkAttrobites,
+  Serialization
+} from './interface'
 
 // Because vite don't expose rollupOptions declare. So we need to do this.
 type RollupOptions = Exclude<BuildOptions['rollupOptions'], undefined>
@@ -9,6 +16,67 @@ type RollupOptions = Exclude<BuildOptions['rollupOptions'], undefined>
 const PRESET_CDN_DOMAIN = {
   jsdelivr: 'https://cdn.jsdelivr.net/npm/',
   unpkg: 'https://unpkg.com/'
+}
+
+// refer: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script
+
+const serialize = (struct: Map<string, Required<TrackModule>>) => {
+  const getMeta = (str: string) => {
+    const suffix = str.split('.').pop()
+
+    const isScript = suffix === 'js'
+
+    return {
+      type: isScript ? '' : 'stylesheet',
+      tag: isScript ? 'script' : 'link',
+      isScript
+    } as Pick<Serialization, 'type' | 'tag'>
+  }
+
+  const parserd: Array<(ScriptAttributes & Serialization) | (LinkAttrobites & Serialization)> = []
+  struct.forEach(({ spare }) => {
+    if (Array.isArray(spare)) {
+      spare.forEach((sp) => {
+        const { type, tag } = getMeta(sp)
+        const next: Serialization = {
+          tag,
+          type,
+          url: sp
+        }
+        parserd.push(next)
+      })
+    } else {
+      const { type, tag } = getMeta(spare)
+      parserd.push(
+        Object.assign({
+          tag,
+          url: spare,
+          type
+        })
+      )
+    }
+  })
+  return parserd
+}
+
+const toString = (metas: ReturnType<typeof serialize>) => {
+  const def = (origianl: (ScriptAttributes & Serialization) | (LinkAttrobites & Serialization)) => {
+    const { url, tag, ...rest } = origianl
+    const otherParams = Object.entries(rest).reduce((acc, [attr, v]) => {
+      if (v) {
+        if (typeof v === 'boolean') return (acc += (attr as string).toLowerCase())
+        return (acc += `${(attr as string).toLowerCase()}="${v}"`)
+      }
+      return acc
+    }, '')
+    if (tag === 'link') return `<link ${otherParams} href="${url}" />`
+    return `<script ${otherParams} src="${url}"></script>`
+  }
+
+  return metas.reduce((acc, cur) => {
+    const r = def(cur) + '\n'
+    return (acc += r)
+  }, '')
 }
 
 export const parserModuleImpl = (modules: TrackModule[], preset: PresetDomain) => {
@@ -62,7 +130,7 @@ export const cdn = (options: CDNPluginOptions): Plugin => {
 
   if (bucket.length && logInfo === 'info') {
     bucket.forEach((b) => {
-      console.log(`[vite-plugin-cdn2]: can't found unpkg or jsdelivr filed from ${b}. Please enter manually.`)
+      console.warn(`[vite-plugin-cdn2]: can't found unpkg or jsdelivr filed from ${b}. Please enter manually.`)
     })
   }
 
@@ -95,9 +163,14 @@ export const cdn = (options: CDNPluginOptions): Plugin => {
     },
     transformIndexHtml(raw: string) {
       if (!isProduction) return
-      if (options.transform) {
-        const { transform } = options
-      }
+      const metas = serialize(finder)
+      const tpl = toString(metas)
+      const window = new Window()
+      const { document } = window
+      document.body.innerHTML = raw
+      const headEl = document.body.querySelector('head')
+      headEl.insertAdjacentHTML('beforeend', tpl)
+      return document.body.innerHTML
     }
   }
 }

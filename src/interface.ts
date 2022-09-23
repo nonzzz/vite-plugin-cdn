@@ -13,23 +13,33 @@ export interface CDNPluginOptions {
   logInfo?: 'silent' | 'info'
 }
 
-export type ScriptKeyWord = Pick<
-  HTMLScriptElement,
-  'async' | 'charset' | 'crossOrigin' | 'defer' | 'integrity' | 'noModule' | 'nonce' | 'referrerPolicy' | 'type'
+export type ScriptAttributes = Partial<
+  Pick<
+    HTMLScriptElement,
+    'async' | 'crossOrigin' | 'defer' | 'integrity' | 'noModule' | 'nonce' | 'referrerPolicy' | 'type'
+  >
 >
 
-export type LinkKeyWord = Pick<
-  HTMLLinkElement,
-  | 'as'
-  | 'crossOrigin'
-  | 'href'
-  | 'hreflang'
-  | 'imageSizes'
-  | 'imageSrcset'
-  | 'integrity'
-  | 'media'
-  | 'referrerPolicy'
-  | 'rel'
-  | 'title'
-  | 'type'
+export type LinkAttrobites = Partial<
+  Pick<
+    HTMLLinkElement,
+    | 'as'
+    | 'crossOrigin'
+    | 'href'
+    | 'hreflang'
+    | 'imageSizes'
+    | 'imageSrcset'
+    | 'integrity'
+    | 'media'
+    | 'referrerPolicy'
+    | 'rel'
+    | 'title'
+    | 'type'
+  >
 >
+
+export interface Serialization {
+  url?: string
+  type?: string
+  tag: 'link' | 'script'
+}
