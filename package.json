@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "bump"
+    "build": "bump",
+    "test": "vite build"
   },
   "keywords": [
     "vite",
@@ -39,6 +40,9 @@
     ]
   },
   "dependencies": {
-    "happy-dom": "^6.0.4"
+    "@rollup/pluginutils": "^4.2.1",
+    "estree-walker": "^2.0.2",
+    "happy-dom": "^6.0.4",
+    "magic-string": "^0.26.4"
   }
 }

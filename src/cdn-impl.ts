@@ -1,4 +1,5 @@
 import { Window } from 'happy-dom'
+import MagicString from 'magic-string'
 import { tryRequireModule } from './shared'
 import type { Plugin, UserConfig, BuildOptions } from 'vite'
 import type {
@@ -8,8 +9,10 @@ import type {
   ScriptAttributes,
   LinkAttrobites,
   Serialization,
-  Transformed
+  Transformed,
+  AcornNode
 } from './interface'
+import { translate } from './ast'
 
 // Because vite don't expose rollupOptions declare. So we need to do this.
 type RollupOptions = Exclude<BuildOptions['rollupOptions'], undefined>
@@ -166,6 +169,19 @@ export const cdn = (options: CDNPluginOptions): Plugin => {
         }
 
         return userConfig
+      }
+    },
+    transform(code, id) {
+      if (id[0] === '\0') return
+      if ([...finder.keys()].every((s) => !code.includes(s))) return
+      const ast = this.parse(code) as AcornNode
+      const { code: parserd } = translate(ast, {
+        finder,
+        code: new MagicString(code)
+      })
+      return {
+        code: parserd.toString(),
+        map: parserd.generateMap()
       }
     },
     transformIndexHtml(raw: string) {

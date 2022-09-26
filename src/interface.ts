@@ -54,3 +54,10 @@ export interface Serialization {
   type?: string
   tag: 'link' | 'script'
 }
+
+export interface AcornNode {
+  end: number
+  start: number
+  type: string
+  [prop: string]: unknown
+}
