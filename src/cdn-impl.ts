@@ -127,6 +127,7 @@ export const parserModuleImpl = (modules: TrackModule[], preset: PresetDomain) =
 
 export const cdn = (options: CDNPluginOptions): Plugin => {
   const { modules = [], isProduction = false, preset = 'auto', logInfo = 'info' } = options
+
   const { finder, bucket } = parserModuleImpl(modules, preset)
 
   if (bucket.length && logInfo === 'info') {
@@ -144,7 +145,12 @@ export const cdn = (options: CDNPluginOptions): Plugin => {
         const prev = userConfig.build?.rollupOptions?.external || []
         const rollupOptions: RollupOptions = {}
         if (typeof prev === 'function') {
-          // expose a tips
+          // Because we can't merge the external for function call. So we should expose
+          // a tip for user.
+          rollupOptions.external = names
+          console.warn(
+            "[vite-plugin-cdn2]: your external options call with function, It can't be merged. Will replace it."
+          )
         } else {
           if (Array.isArray(prev)) {
             rollupOptions.external = [...prev, ...names]
