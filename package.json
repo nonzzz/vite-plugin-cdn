@@ -4,8 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "bump",
-    "test": "vite build"
+    "build": "bump"
   },
   "keywords": [
     "vite",

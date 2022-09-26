@@ -142,35 +142,6 @@ export const cdn = (options: CDNPluginOptions): Plugin => {
   return {
     name: 'vite-plugin-cdn',
     enforce: 'post',
-    config(userConfig: UserConfig) {
-      const names: Array<string | RegExp> = [...finder.keys()]
-      if (names.length) {
-        const prev = userConfig.build?.rollupOptions?.external || []
-        const rollupOptions: RollupOptions = {}
-        if (typeof prev === 'function') {
-          // Because we can't merge the external for function call. So we should expose
-          // a tip for user.
-          rollupOptions.external = names
-          console.warn(
-            "[vite-plugin-cdn2]: your external options call with function, It can't be merged. Will replace it."
-          )
-        } else {
-          if (Array.isArray(prev)) {
-            rollupOptions.external = [...prev, ...names]
-          } else {
-            rollupOptions.external = names.concat(prev)
-          }
-        }
-
-        if (userConfig.build) {
-          Object.assign(userConfig.build, { rollupOptions })
-        } else {
-          userConfig.build = { rollupOptions }
-        }
-
-        return userConfig
-      }
-    },
     transform(code, id) {
       if (id[0] === '\0') return
       if ([...finder.keys()].every((s) => !code.includes(s))) return
