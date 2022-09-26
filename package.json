@@ -1,10 +1,13 @@
 {
   "name": "vite-plugin-cdn2",
-  "version": "0.0.0",
-  "description": "",
-  "main": "index.js",
+  "version": "0.0.1",
+  "description": "A Vite plugin that allowed you replace module with CDN",
+  "main": "dist/index.cjs.js",
+  "module": "dist/index.esm.js",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "build": "bump"
+    "build": "bump",
+    "test": "vite build"
   },
   "keywords": [
     "vite",
@@ -12,7 +15,7 @@
     "cdn",
     "vite-plugin-cdn"
   ],
-  "author": "",
+  "author": "Kanno",
   "license": "MIT",
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^5.30.5",
@@ -39,8 +42,6 @@
     ]
   },
   "dependencies": {
-    "@rollup/pluginutils": "^4.2.1",
-    "estree-walker": "^2.0.2",
     "happy-dom": "^6.0.4",
     "magic-string": "^0.26.4"
   }
