@@ -1,13 +1,13 @@
 {
   "name": "vite-plugin-cdn2",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "A Vite plugin that allowed you replace module with CDN",
   "main": "dist/index.cjs.js",
   "module": "dist/index.esm.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "bump",
-    "test":"ava",
+    "test": "ava",
     "dev": "node dev.js"
   },
   "keywords": [

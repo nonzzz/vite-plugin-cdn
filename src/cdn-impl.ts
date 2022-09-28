@@ -127,7 +127,7 @@ export const parserModuleImpl = (modules: TrackModule[], preset: PresetDomain) =
   return { finder, bucket }
 }
 
-export const cdn = (options: CDNPluginOptions): Plugin => {
+export const cdn = (options: CDNPluginOptions = {}): Plugin => {
   const { modules = [], isProduction = false, preset = 'auto', logInfo = 'info' } = options
 
   const { finder, bucket } = parserModuleImpl(modules, preset)
