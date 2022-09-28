@@ -1,3 +1,11 @@
+/**
+ * FYI. This file will be refactor in future.
+ * Becuase rollup don't support return AST. so
+ * we prase the raw code to AST. then get
+ * the import and exports meta. Then use magic-string
+ * to replace them.
+ */
+
 // refer https://astexplorer.net/
 import MagicString from 'magic-string'
 import type { AcornNode, TrackModule } from './interface'
@@ -15,7 +23,6 @@ interface GrapResult {
 }
 
 const ensureExportModule = (local: { name: string }, exported: { name: string }, globalName: string): string => {
-  //
   if (local.name === exported.name) {
     if (local.name === 'default') return globalName
     return `${globalName}.${local.name}`
@@ -28,7 +35,7 @@ const ensureExportModule = (local: { name: string }, exported: { name: string },
 }
 
 // graph will record all import and export value and pos.
-// Currently, It's not a good way to support export * from 'xzy'
+// Currently, It's not a good way to support export * from 'module'
 
 const graph = (
   nodes: Array<
@@ -47,7 +54,6 @@ const graph = (
   const exportsType = [AST_TYPES.EXPORT_NAMED_DECLARATION]
 
   const exports = nodes.filter(({ type }) => exportsType.includes(type))
-
   imports.forEach(({ source = {}, specifiers, start, end }) => {
     const { value: name } = source as AcornNode & {
       value?: string
@@ -128,9 +134,7 @@ export const translate = (
   pows.forEach(({ pos, alias, isDefault }, k) => {
     const ident = k === alias ? `__export__${k}` : k
     const str = isDefault
-      ? `const ${ident} = ${alias};\n
-    export default ${ident};\n
-    `
+      ? `const ${ident} = ${alias};\nexport default ${ident};\n`
       : `export const ${ident} = ${alias};\n`
     es.push(str)
     code.remove(pos[0], pos[1])
