@@ -8,7 +8,8 @@
   "scripts": {
     "build": "bump",
     "test": "ava",
-    "dev": "node dev.js"
+    "dev": "node dev.js",
+    "coverage": "c8 -r=lcov ava"
   },
   "keywords": [
     "vite",
@@ -23,6 +24,7 @@
     "@typescript-eslint/parser": "^5.30.5",
     "acorn": "^8.8.0",
     "ava": "^4.3.3",
+    "c8": "^7.12.0",
     "eslint": "^8.23.1",
     "eslint-config-kagura": "^1.0.3",
     "eslint-config-prettier": "^8.5.0",
