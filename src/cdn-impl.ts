@@ -1,6 +1,6 @@
 import { Window } from 'happy-dom'
 import MagicString from 'magic-string'
-import { tryRequireModule } from './shared'
+import { tryRequireModule, unique } from './shared'
 import type { Plugin } from 'vite'
 import type {
   TrackModule,
@@ -13,8 +13,6 @@ import type {
   AcornNode
 } from './interface'
 import { translate } from './ast'
-
-// Because vite don't expose rollupOptions declare. So we need to do this.
 
 const PRESET_CDN_DOMAIN = {
   jsdelivr: 'https://cdn.jsdelivr.net/npm/',
@@ -38,26 +36,15 @@ const serialize = (struct: Map<string, Required<TrackModule>>) => {
 
   const parserd: Transformed = []
   struct.forEach(({ spare }) => {
-    if (Array.isArray(spare)) {
-      spare.forEach((sp) => {
-        const { type, tag } = getMeta(sp)
-        const next: Serialization = {
-          tag,
-          type,
-          url: sp
-        }
-        parserd.push(next)
+    const final = unique(Array.isArray(spare) ? spare : [spare])
+    final.forEach((sp) => {
+      const { type, tag } = getMeta(sp)
+      parserd.push({
+        tag,
+        url: sp,
+        type
       })
-    } else {
-      const { type, tag } = getMeta(spare)
-      parserd.push(
-        Object.assign({
-          tag,
-          url: spare,
-          type
-        })
-      )
-    }
+    })
   })
   return parserd
 }
@@ -82,7 +69,7 @@ const toString = (metas: ReturnType<typeof serialize>) => {
   }, '')
 }
 
-export const parserModuleImpl = (modules: TrackModule[], preset: PresetDomain) => {
+const parserModuleImpl = (modules: TrackModule[], preset: PresetDomain) => {
   const bucket: string[] = []
   const finder: Map<string, Required<TrackModule>> = new Map()
   modules.forEach((module, i) => {
@@ -117,8 +104,11 @@ export const parserModuleImpl = (modules: TrackModule[], preset: PresetDomain) =
       case 'auto':
       case 'unpkg':
       case 'jsdelivr':
-        if (!jsdelivr && !unpkg) return bucket.push(name)
-        finder.set(name, { name, global, spare: ensureCDN(preset) })
+        if (!jsdelivr && !unpkg && !spare?.length) return bucket.push(name)
+        const latestSpare = spare ? (Array.isArray(spare) ? spare : [spare]) : []
+        const track = { name, global, spare: [ensureCDN(preset)] }
+        if (latestSpare.length) track.spare.push(...latestSpare)
+        finder.set(name, track)
         break
       default:
         throw Error(`[vite-plugin-cdn2]: Invalid preset ${preset}`)
@@ -131,7 +121,6 @@ export const cdn = (options: CDNPluginOptions = {}): Plugin => {
   const { modules = [], isProduction = false, preset = 'auto', logInfo = 'info' } = options
 
   const { finder, bucket } = parserModuleImpl(modules, preset)
-
   if (bucket.length && logInfo === 'info') {
     bucket.forEach((b) => {
       console.warn(`[vite-plugin-cdn2]: can't found unpkg or jsdelivr filed from ${b}. Please enter manually.`)
