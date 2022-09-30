@@ -19,6 +19,14 @@
   ],
   "author": "Kanno",
   "license": "MIT",
+  "homepage": "https://github.com/nonzzz/vite-plugin-cdn",
+  "bugs": {
+    "url": "https://github.com/nonzzz/vite-plugin-cdn/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nonzzz/vite-plugin-cdn.git"
+  },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^5.30.5",
     "@typescript-eslint/parser": "^5.30.5",
