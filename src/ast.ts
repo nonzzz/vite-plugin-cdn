@@ -9,6 +9,7 @@
 // refer https://astexplorer.net/
 import MagicString from 'magic-string'
 import type { AcornNode, TrackModule } from './interface'
+import { tryRequireModule } from './shared'
 
 const AST_TYPES = {
   IMPORT_DECLARATION: 'ImportDeclaration',
@@ -28,14 +29,15 @@ const ensureExportModule = (local: { name: string }, exported: { name: string },
     return `${globalName}.${local.name}`
   }
 
-  if (local.name === 'default') {
-    return exported.name
+  if (exported.name === 'default') {
+    return `${globalName}.${local.name}`
   }
+
   return `${globalName}.${exported.name}`
 }
 
-// graph will record all import and export value and pos.
-// Currently, It's not a good way to support export * from 'module'
+// We will analyzed the import and export syntax in source code.
+// Transform them by right rule.
 
 const graph = (
   nodes: Array<
@@ -51,7 +53,7 @@ const graph = (
 
   const imports = nodes.filter(({ type }) => type === AST_TYPES.IMPORT_DECLARATION)
 
-  const exportsType = [AST_TYPES.EXPORT_NAMED_DECLARATION]
+  const exportsType = [AST_TYPES.EXPORT_NAMED_DECLARATION, AST_TYPES.EXPORT_ALL_DECLARATION]
 
   const exports = nodes.filter(({ type }) => exportsType.includes(type))
   imports.forEach(({ source = {}, specifiers, start, end }) => {
@@ -67,25 +69,41 @@ const graph = (
     })
   })
 
-  exports.forEach(({ source = {}, specifiers, start, end, declaration }) => {
-    if (declaration) return
-    if (!source) return
-    const { value: name } = source as AcornNode & {
-      value?: string
-    }
-    if (!name) return
-    const meta = finder.get(name)
-    if (!meta) return
-    specifiers.forEach((spec) => {
-      const local = spec.local as { name: string }
-      const exported = spec.exported as { name: string }
-      const n = ensureExportModule(local, exported, meta.global)
-      pows.set(local.name === 'default' ? meta.global : local.name, {
-        alias: n,
-        pos: [start, end],
-        isDefault: exported.name === 'default'
+  exports.forEach(({ source = {}, specifiers, start, end, declaration, type }) => {
+    if (type === AST_TYPES.EXPORT_ALL_DECLARATION) {
+      const { value: name } = source as AcornNode & {
+        value?: string
+      }
+      if (!name) return
+      if (finder.has(name)) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const pkg = tryRequireModule(name) as any
+        const keys = Object.keys(pkg)
+        const realKeys = keys.length === 1 && keys[0] === 'default' ? Object.keys(pkg.default) : keys
+        realKeys.forEach((k) => {
+          pows.set(k, { alias: `${finder.get(name)?.global}.${k}`, pos: [start, end] })
+        })
+      }
+    } else {
+      if (declaration) return
+      if (!source) return
+      const { value: name } = source as AcornNode & {
+        value?: string
+      }
+      if (!name) return
+      const meta = finder.get(name)
+      if (!meta) return
+      specifiers.forEach((spec) => {
+        const local = spec.local as { name: string }
+        const exported = spec.exported as { name: string }
+        const n = ensureExportModule(local, exported, meta.global)
+        pows.set(local.name === 'default' ? meta.global : local.name, {
+          alias: n,
+          pos: [start, end],
+          isDefault: exported.name === 'default'
+        })
       })
-    })
+    }
   })
 
   return { weaks, pows }
@@ -117,7 +135,6 @@ export const translate = (
     s.push(`const ${ident} = ${alias};\n`)
     code.remove(pos[0], pos[1])
   })
-
   /**
    * eg:
    *  export { ref } from  'vue'
@@ -129,8 +146,10 @@ export const translate = (
    *
    *  export {default as React } from 'react'
    *  transform as export const _React  = React
+   *
+   *  export * from 'vue'
+   *  transform as export const ref = Vue.ref
    */
-
   pows.forEach(({ pos, alias, isDefault }, k) => {
     const ident = k === alias ? `__export__${k}` : k
     const str = isDefault
@@ -146,5 +165,6 @@ export const translate = (
   )
 
   code.append(es.reduce((acc, cur) => (acc += cur), ''))
+
   return { code }
 }
