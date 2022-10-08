@@ -1,12 +1,15 @@
-/**
- * FYI. This file will be refactor in future.
- * Becuase rollup don't support return AST. so
- * we prase the raw code to AST. then get
- * the import and exports meta. Then use magic-string
- * to replace them.
- */
+// This file invorked by `cdn-impl`. Provide translate func
+// only transform import and export syntax.
 
-// refer https://astexplorer.net/
+// ExportAllDeclaration is a special case. we should analyze it (May it'll cause bug. At present, All i can think of should be `default export`)
+// Maybe it's also break the semantics of the original code.
+// Just like vue3 don't export as default export. but using this plugin you can write `import Vue from 'vue';`
+// Will be transform as `const __import__Vue = Vue;` (Currently, Don't care the module is a namespace.)
+// In some case. mayn't be able to cover :) If the case is right. PR Welcome.
+// FYI.
+
+// Refer https://astexplorer.net/
+
 import MagicString from 'magic-string'
 import type { AcornNode, TrackModule } from './interface'
 import { tryRequireModule } from './shared'
@@ -51,60 +54,87 @@ const graph = (
 
   const pows = new Map<string, GrapResult>()
 
-  const imports = nodes.filter(({ type }) => type === AST_TYPES.IMPORT_DECLARATION)
+  const nodeInvork = (
+    nodes: Array<
+      AcornNode & {
+        specifiers: Array<AcornNode>
+      }
+    >,
+    filter: string[],
+    invork?: (
+      nodes: AcornNode & {
+        specifiers: Array<AcornNode>
+      }
+    ) => void
+  ) => {
+    const filters = nodes.filter(({ type }) => filter.includes(type))
+    filters.forEach((v) => invork && invork(v))
+  }
 
-  const exportsType = [AST_TYPES.EXPORT_NAMED_DECLARATION, AST_TYPES.EXPORT_ALL_DECLARATION]
-
-  const exports = nodes.filter(({ type }) => exportsType.includes(type))
-  imports.forEach(({ source = {}, specifiers, start, end }) => {
-    const { value: name } = source as AcornNode & {
-      value?: string
-    }
-    if (!name) return
-    const meta = finder.get(name)
-    if (!meta) return
-    specifiers.forEach((spec) => {
-      const n = spec.imported ? `${meta.global}.${(spec.imported as { name: string }).name}` : meta.global
-      weaks.set((spec.local as { name: string }).name, { alias: n, pos: [start, end] })
-    })
+  nodeInvork(nodes, [AST_TYPES.IMPORT_DECLARATION], (imports) => {
+    const { source = {}, specifiers, start, end } = imports
+    return
   })
 
-  exports.forEach(({ source = {}, specifiers, start, end, declaration, type }) => {
-    if (type === AST_TYPES.EXPORT_ALL_DECLARATION) {
-      const { value: name } = source as AcornNode & {
-        value?: string
-      }
-      if (!name) return
-      if (finder.has(name)) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const pkg = tryRequireModule(name) as any
-        const keys = Object.keys(pkg)
-        const realKeys = keys.length === 1 && keys[0] === 'default' ? Object.keys(pkg.default) : keys
-        realKeys.forEach((k) => {
-          pows.set(k, { alias: `${finder.get(name)?.global}.${k}`, pos: [start, end] })
-        })
-      }
-    } else {
-      if (declaration) return
-      if (!source) return
-      const { value: name } = source as AcornNode & {
-        value?: string
-      }
-      if (!name) return
-      const meta = finder.get(name)
-      if (!meta) return
-      specifiers.forEach((spec) => {
-        const local = spec.local as { name: string }
-        const exported = spec.exported as { name: string }
-        const n = ensureExportModule(local, exported, meta.global)
-        pows.set(local.name === 'default' ? meta.global : local.name, {
-          alias: n,
-          pos: [start, end],
-          isDefault: exported.name === 'default'
-        })
-      })
-    }
+  nodeInvork(nodes, [AST_TYPES.EXPORT_NAMED_DECLARATION, AST_TYPES.EXPORT_ALL_DECLARATION], (exports) => {
+    const { source = {}, specifiers, start, end, declaration, type } = exports
+    return
   })
+
+  // const imports = nodes.filter(({ type }) => type === AST_TYPES.IMPORT_DECLARATION)
+
+  // const exportsType = [AST_TYPES.EXPORT_NAMED_DECLARATION, AST_TYPES.EXPORT_ALL_DECLARATION]
+
+  // const exports = nodes.filter(({ type }) => exportsType.includes(type))
+  // imports.forEach(({ source = {}, specifiers, start, end }) => {
+  //   const { value: name } = source as AcornNode & {
+  //     value?: string
+  //   }
+  //   if (!name) return
+  //   const meta = finder.get(name)
+  //   if (!meta) return
+  //   specifiers.forEach((spec) => {
+  //     const n = spec.imported ? `${meta.global}.${(spec.imported as { name: string }).name}` : meta.global
+  //     weaks.set((spec.local as { name: string }).name, { alias: n, pos: [start, end] })
+  //   })
+  // })
+
+  // exports.forEach(({ source = {}, specifiers, start, end, declaration, type }) => {
+  //   if (type === AST_TYPES.EXPORT_ALL_DECLARATION) {
+  //     const { value: name } = source as AcornNode & {
+  //       value?: string
+  //     }
+  //     if (!name) return
+  //     if (finder.has(name)) {
+  //       // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  //       const pkg = tryRequireModule(name) as any
+  //       const keys = Object.keys(pkg)
+  //       const realKeys = keys.length === 1 && keys[0] === 'default' ? Object.keys(pkg.default) : keys
+  //       realKeys.forEach((k) => {
+  //         pows.set(k, { alias: `${finder.get(name)?.global}.${k}`, pos: [start, end] })
+  //       })
+  //     }
+  //   } else {
+  //     if (declaration) return
+  //     if (!source) return
+  //     const { value: name } = source as AcornNode & {
+  //       value?: string
+  //     }
+  //     if (!name) return
+  //     const meta = finder.get(name)
+  //     if (!meta) return
+  //     specifiers.forEach((spec) => {
+  //       const local = spec.local as { name: string }
+  //       const exported = spec.exported as { name: string }
+  //       const n = ensureExportModule(local, exported, meta.global)
+  //       pows.set(local.name === 'default' ? meta.global : local.name, {
+  //         alias: n,
+  //         pos: [start, end],
+  //         isDefault: exported.name === 'default'
+  //       })
+  //     })
+  //   }
+  // })
 
   return { weaks, pows }
 }
