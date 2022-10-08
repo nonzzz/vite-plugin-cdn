@@ -1,6 +1,6 @@
 import { Window } from 'happy-dom'
 import MagicString from 'magic-string'
-import { tryRequireModule, unique } from './shared'
+import { tryRequireModule, unique, ERRORS, error } from './shared'
 import type { Plugin } from 'vite'
 import type {
   TrackModule,
@@ -74,7 +74,7 @@ const parserModuleImpl = (modules: TrackModule[], preset: PresetDomain) => {
     | string
     | {
         name: string
-        type: 'NO_SPARE' | 'INVALID_PACKAGE' | 'NO_PRESET_FIELDS'
+        type: 'INVALID_PACKAGE' | 'NO_PRESET_FIELDS'
       }
   > = []
   const finder: Map<string, Required<TrackModule>> = new Map()
@@ -100,13 +100,25 @@ const parserModuleImpl = (modules: TrackModule[], preset: PresetDomain) => {
         `${name}/package.json`
       )
 
-      const ensureCDN = (type: Exclude<PresetDomain, false>) => {
+      const monitor = (type: Exclude<PresetDomain, false>) => {
         if (type === 'auto') {
-          return `${jsdelivr ? PRESET_CDN_DOMAIN.jsdelivr : PRESET_CDN_DOMAIN.unpkg}${name}@${version}/${
-            jsdelivr ? jsdelivr : unpkg
-          }`
+          // In auto mode. jsdelivr is first.
+          const real = jsdelivr ? jsdelivr : unpkg
+          if (!real)
+            error({
+              code: ERRORS.NO_PRESET_FIELDS,
+              message: ''
+            })
+          const type = jsdelivr ? 'jsdelivr' : 'unpkg'
+          return `${PRESET_CDN_DOMAIN[type]}${name}@${version}/${real}`
         }
-        return `${PRESET_CDN_DOMAIN[type]}${name}@${version}/${type === 'jsdelivr' ? jsdelivr : unpkg}`
+        const real = type === 'jsdelivr' ? jsdelivr : type === 'unpkg' ? unpkg : undefined
+        if (!real)
+          error({
+            code: ERRORS.NO_PRESET_FIELDS,
+            message: ''
+          })
+        return `${PRESET_CDN_DOMAIN[type]}${name}@${version}/${real}`
       }
 
       /**
@@ -118,16 +130,42 @@ const parserModuleImpl = (modules: TrackModule[], preset: PresetDomain) => {
         case 'auto':
         case 'unpkg':
         case 'jsdelivr':
-          if (!jsdelivr && !unpkg && !spare?.length) return bucket.push(name)
-          const latestSpare = spare ? (Array.isArray(spare) ? spare : [spare]) : []
-          const track = { name, global, spare: [ensureCDN(preset)] }
-          if (latestSpare.length) track.spare.push(...latestSpare)
+          const track = { name, global, spare: [monitor(preset)] }
+          if (spare?.length) {
+            const latestSpare = Array.isArray(spare) ? spare : [spare]
+            track.spare.push(...latestSpare)
+          }
           finder.set(name, track)
           break
         default:
-          throw Error(`[vite-plugin-cdn2]: Invalid preset ${preset}`)
+          error({
+            code: ERRORS.INVALID_PRESET,
+            message: `[vite-plugin-cdn2]: Invalid preset ${preset}`
+          })
       }
-    } catch (_) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (err: any) {
+      // https://www.typescriptlang.org/tsconfig#useUnknownInCatchVariables
+      if (err.code) {
+        if (err.code === ERRORS.INVALID_PRESET) return error(err)
+        if (err.code === ERRORS.NO_PRESET_FIELDS) {
+          if (!spare?.length) {
+            bucket.push({
+              name,
+              type: 'NO_PRESET_FIELDS'
+            })
+          } else {
+            const latestSpare = Array.isArray(spare) ? spare : [spare]
+            const latestTrack = finder.get(name)
+            if (!latestTrack) {
+              const track = { name, global, spare: latestSpare }
+              finder.set(name, track)
+              return
+            }
+          }
+          return
+        }
+      }
       bucket.push({
         name,
         type: 'INVALID_PACKAGE'
@@ -143,8 +181,9 @@ export const cdn = (options: CDNPluginOptions = {}): Plugin => {
   const { finder, bucket } = parserModuleImpl(modules, preset)
   if (bucket.length && logInfo === 'info') {
     bucket.forEach((b) => {
+      // If disabled the preset conf.
       if (typeof b === 'string') {
-        console.warn(`[vite-plugin-cdn2]: can't found unpkg or jsdelivr filed from ${b}. Please enter manually.`)
+        console.warn(`[vite-plugin-cdn2]: please enter manually for ${b}.`)
         return
       }
       const { type, name } = b
@@ -153,6 +192,9 @@ export const cdn = (options: CDNPluginOptions = {}): Plugin => {
           console.warn(
             `[vite-plugin-cdn2]: can't find ${name} from node_modules in the workspace. Please check the package name manually.`
           )
+          break
+        case 'NO_PRESET_FIELDS':
+          console.warn(`[vite-plugin-cdn2]: can't find unpkg or jsdelivr filed from ${name}. Please enter manually.`)
           break
       }
     })
