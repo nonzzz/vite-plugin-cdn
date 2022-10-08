@@ -70,7 +70,13 @@ const toString = (metas: ReturnType<typeof serialize>) => {
 }
 
 const parserModuleImpl = (modules: TrackModule[], preset: PresetDomain) => {
-  const bucket: string[] = []
+  const bucket: Array<
+    | string
+    | {
+        name: string
+        type: 'NO_SPARE' | 'INVALID_PACKAGE' | 'NO_PRESET_FIELDS'
+      }
+  > = []
   const finder: Map<string, Required<TrackModule>> = new Map()
   modules.forEach((module, i) => {
     const { name, global, spare } = module
@@ -78,9 +84,6 @@ const parserModuleImpl = (modules: TrackModule[], preset: PresetDomain) => {
       if (!name) throw Error(`[vite-plugin-cdn2]: Please pass the name for modules at postion ${i}. `)
       throw Error(`[vite-plugin-cdn2]: Please pass the global for modules at postion ${i}. `)
     }
-    const { version, unpkg, jsdelivr } = tryRequireModule<{ version: string; unpkg?: string; jsdelivr?: string }>(
-      `${name}/package.json`
-    )
 
     if (typeof preset === 'boolean' && !preset) {
       if (!spare) {
@@ -90,28 +93,45 @@ const parserModuleImpl = (modules: TrackModule[], preset: PresetDomain) => {
       finder.set(name, { name, global, spare })
       return
     }
+    // In past. we always try to load the information from user node_modules. But if user pass an no exist package
+    // it will block process and interrupt. So we should catch it in us internal logic. I think it's a right way.
+    try {
+      const { version, unpkg, jsdelivr } = tryRequireModule<{ version: string; unpkg?: string; jsdelivr?: string }>(
+        `${name}/package.json`
+      )
 
-    const ensureCDN = (type: Exclude<PresetDomain, false>) => {
-      if (type === 'auto') {
-        return `${jsdelivr ? PRESET_CDN_DOMAIN.jsdelivr : PRESET_CDN_DOMAIN.unpkg}${name}@${version}/${
-          jsdelivr ? jsdelivr : unpkg
-        }`
+      const ensureCDN = (type: Exclude<PresetDomain, false>) => {
+        if (type === 'auto') {
+          return `${jsdelivr ? PRESET_CDN_DOMAIN.jsdelivr : PRESET_CDN_DOMAIN.unpkg}${name}@${version}/${
+            jsdelivr ? jsdelivr : unpkg
+          }`
+        }
+        return `${PRESET_CDN_DOMAIN[type]}${name}@${version}/${type === 'jsdelivr' ? jsdelivr : unpkg}`
       }
-      return `${PRESET_CDN_DOMAIN[type]}${name}@${version}/${type === 'jsdelivr' ? jsdelivr : unpkg}`
-    }
 
-    switch (preset) {
-      case 'auto':
-      case 'unpkg':
-      case 'jsdelivr':
-        if (!jsdelivr && !unpkg && !spare?.length) return bucket.push(name)
-        const latestSpare = spare ? (Array.isArray(spare) ? spare : [spare]) : []
-        const track = { name, global, spare: [ensureCDN(preset)] }
-        if (latestSpare.length) track.spare.push(...latestSpare)
-        finder.set(name, track)
-        break
-      default:
-        throw Error(`[vite-plugin-cdn2]: Invalid preset ${preset}`)
+      /**
+       * In some package that not provide the jsdelivr and unpkg filed. So that we'll got undefined.
+       * So for DX. we should check it if user pass spare option. we will concat them. If not, we will
+       * push to bucket.
+       */
+      switch (preset) {
+        case 'auto':
+        case 'unpkg':
+        case 'jsdelivr':
+          if (!jsdelivr && !unpkg && !spare?.length) return bucket.push(name)
+          const latestSpare = spare ? (Array.isArray(spare) ? spare : [spare]) : []
+          const track = { name, global, spare: [ensureCDN(preset)] }
+          if (latestSpare.length) track.spare.push(...latestSpare)
+          finder.set(name, track)
+          break
+        default:
+          throw Error(`[vite-plugin-cdn2]: Invalid preset ${preset}`)
+      }
+    } catch (_) {
+      bucket.push({
+        name,
+        type: 'INVALID_PACKAGE'
+      })
     }
   })
   return { finder, bucket }
@@ -123,7 +143,18 @@ export const cdn = (options: CDNPluginOptions = {}): Plugin => {
   const { finder, bucket } = parserModuleImpl(modules, preset)
   if (bucket.length && logInfo === 'info') {
     bucket.forEach((b) => {
-      console.warn(`[vite-plugin-cdn2]: can't found unpkg or jsdelivr filed from ${b}. Please enter manually.`)
+      if (typeof b === 'string') {
+        console.warn(`[vite-plugin-cdn2]: can't found unpkg or jsdelivr filed from ${b}. Please enter manually.`)
+        return
+      }
+      const { type, name } = b
+      switch (type) {
+        case 'INVALID_PACKAGE':
+          console.warn(
+            `[vite-plugin-cdn2]: can't find ${name} from node_modules in the workspace. Please check the package name manually.`
+          )
+          break
+      }
     })
   }
 

@@ -12,4 +12,4 @@ export const tryRequireModule = <T>(module: string): T => {
   return _require(module) as T
 }
 
-export const unique = <T extends string[]>(origianl: T) => Array.from(new Set(origianl))
+export const unique = <T extends string[]>(original: T) => Array.from(new Set(original))
