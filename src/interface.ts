@@ -61,3 +61,8 @@ export interface AcornNode {
   type: string
   [prop: string]: unknown
 }
+
+export interface InternalError {
+  code: string
+  message: string
+}

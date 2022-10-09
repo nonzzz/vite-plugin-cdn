@@ -1,12 +1,15 @@
-/**
- * FYI. This file will be refactor in future.
- * Becuase rollup don't support return AST. so
- * we prase the raw code to AST. then get
- * the import and exports meta. Then use magic-string
- * to replace them.
- */
+// This file invorked by `cdn-impl`. Provide translate func
+// only transform import and export syntax.
 
-// refer https://astexplorer.net/
+// ExportAllDeclaration is a special case. we should analyze it (May it'll cause bug. At present, All i can think of should be `default export`)
+// Maybe it's also break the semantics of the original code.
+// Just like vue3 don't export as default export. but using this plugin you can write `import Vue from 'vue';`
+// Will be transform as `const __import__Vue = Vue;` (Currently, Don't care the module is a namespace.)
+// In some case. mayn't be able to cover :) If the case is right. PR Welcome.
+// FYI.
+
+// Refer https://astexplorer.net/
+
 import MagicString from 'magic-string'
 import type { AcornNode, TrackModule } from './interface'
 
@@ -27,17 +30,18 @@ const ensureExportModule = (local: { name: string }, exported: { name: string },
     if (local.name === 'default') return globalName
     return `${globalName}.${local.name}`
   }
+  return `${globalName}.${local.name}`
+  // if (exported.name === 'default') {
+  //   return `${globalName}.${local.name}`
+  // }
 
-  if (local.name === 'default') {
-    return exported.name
-  }
-  return `${globalName}.${exported.name}`
+  // return `${globalName}.${exported.name}`
 }
 
-// graph will record all import and export value and pos.
-// Currently, It's not a good way to support export * from 'module'
+// We will analyzed the import and export syntax in source code.
+// Transform them by right rule.
 
-const graph = (
+const graph = async (
   nodes: Array<
     AcornNode & {
       specifiers: Array<AcornNode>
@@ -49,49 +53,118 @@ const graph = (
 
   const pows = new Map<string, GrapResult>()
 
-  const imports = nodes.filter(({ type }) => type === AST_TYPES.IMPORT_DECLARATION)
-
-  const exportsType = [AST_TYPES.EXPORT_NAMED_DECLARATION]
-
-  const exports = nodes.filter(({ type }) => exportsType.includes(type))
-  imports.forEach(({ source = {}, specifiers, start, end }) => {
-    const { value: name } = source as AcornNode & {
+  interface Node extends AcornNode {
+    source: AcornNode & {
       value?: string
     }
-    if (!name) return
-    const meta = finder.get(name)
-    if (!meta) return
-    specifiers.forEach((spec) => {
-      const n = spec.imported ? `${meta.global}.${(spec.imported as { name: string }).name}` : meta.global
-      weaks.set((spec.local as { name: string }).name, { alias: n, pos: [start, end] })
-    })
+    specifiers: Array<AcornNode>
+  }
+
+  const nodeInvork = (nodes: unknown, filter: string[], invork?: (nodes: Node) => void) => {
+    const filters = (nodes as Array<Node>).filter(({ type }) => filter.includes(type))
+    filters.forEach((v) => invork && invork(v))
+  }
+
+  nodeInvork(nodes, [AST_TYPES.IMPORT_DECLARATION], (imports) => {
+    const { source, specifiers, start, end } = imports
+    const { value } = source
+    if (!value) return
+    if (!finder.has(value)) return
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const { global: alias } = finder.get(value)!
+
+    specifiers.length &&
+      specifiers.forEach((spec) => {
+        const { imported, local } = spec as AcornNode & {
+          imported: {
+            name: string
+          }
+          local: {
+            name: string
+          }
+        }
+        const n = imported ? `${alias}.${imported.name}` : alias
+        weaks.set(local.name, { alias: n, pos: [start, end] })
+      })
+    return
   })
 
-  exports.forEach(({ source = {}, specifiers, start, end, declaration }) => {
-    if (declaration) return
-    if (!source) return
-    const { value: name } = source as AcornNode & {
-      value?: string
+  await nodeInvork(nodes, [AST_TYPES.EXPORT_NAMED_DECLARATION, AST_TYPES.EXPORT_ALL_DECLARATION], (exports) => {
+    const { source, specifiers, start, end, declaration, type } = exports
+
+    switch (type) {
+      case AST_TYPES.EXPORT_ALL_DECLARATION: {
+        const { value } = source
+        if (!value) return
+        if (!finder.has(value)) return
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        const { global: alias } = finder.get(value)!
+        import(value).then((pkg) => {
+          const keys = Object.keys(pkg)
+          const realKeys = keys.length === 1 && keys[0] === 'default' ? Object.keys(pkg.default) : keys
+          realKeys.forEach((k) => {
+            pows.set(k === 'default' ? alias : k, {
+              alias: `${alias}.${k}`,
+              pos: [start, end],
+              isDefault: k === 'default'
+            })
+          })
+        })
+        break
+      }
+      default:
+        /**
+         * In some case
+         * ```js
+         *  import Vue from 'vue'
+         *  export const vue = Vue
+         * ```
+         * We will replace the import syntax so we should skip the export syntax with declaration
+         *
+         * Second Case
+         *
+         * ```js
+         *  import { ref } from 'vue'
+         *  export { ref }
+         * ```
+         * Accroding AST node. this case source will be null. should be skip
+         *
+         */
+        if (declaration || !source) return
+        const { value } = source
+        if (!value) return
+        if (!finder.has(value)) return
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        const { global: alias } = finder.get(value)!
+        specifiers &&
+          specifiers.forEach((spec) => {
+            const { exported, local } = spec as AcornNode & {
+              exported: {
+                name: string
+              }
+              local: {
+                name: string
+              }
+            }
+            // named export can cover a variety of situations.
+            // ReExport :)
+            const n = ensureExportModule(local, exported, alias)
+            const isDefault = exported.name === 'default'
+            pows.set(local.name === 'default' ? alias : isDefault ? local.name : exported.name, {
+              alias: n,
+              pos: [start, end],
+              isDefault
+            })
+          })
     }
-    if (!name) return
-    const meta = finder.get(name)
-    if (!meta) return
-    specifiers.forEach((spec) => {
-      const local = spec.local as { name: string }
-      const exported = spec.exported as { name: string }
-      const n = ensureExportModule(local, exported, meta.global)
-      pows.set(local.name === 'default' ? meta.global : local.name, {
-        alias: n,
-        pos: [start, end],
-        isDefault: exported.name === 'default'
-      })
-    })
+
+    return
   })
 
   return { weaks, pows }
 }
 
-export const translate = (
+export const translate = async (
   nodes: AcornNode,
   {
     finder,
@@ -101,11 +174,9 @@ export const translate = (
     code: MagicString
   }
 ) => {
-  const { weaks, pows } = graph(nodes.body as never, finder)
-
+  const { weaks, pows } = await graph(nodes.body as never, finder)
   const s: string[] = []
   const es: string[] = []
-
   /**
    * eg:
    *  import Vue from 'vue'
@@ -129,8 +200,10 @@ export const translate = (
    *
    *  export {default as React } from 'react'
    *  transform as export const _React  = React
+   *
+   *  export * from 'vue'
+   *  transform as export const ref = Vue.ref
    */
-
   pows.forEach(({ pos, alias, isDefault }, k) => {
     const ident = k === alias ? `__export__${k}` : k
     const str = isDefault

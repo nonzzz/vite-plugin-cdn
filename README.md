@@ -3,6 +3,11 @@
 A Vite plugin that allowed you replace module with CDN. This plugin is designed to replace
 `vite-plugin-cdn`,`vite-plugin-cdn-import`.
 
+<p align="center">
+<img src="https://img.shields.io/codecov/c/github/nonzzz/vite-plugin-cdn?style=for-the-badge" alt="Coverage Status" />
+<img alt="GitHub Workflow Status" src="https://img.shields.io/github/workflow/status/nonzzz/vite-plugin-cdn/test?style=for-the-badge">
+</p>
+
 ## Quick Start
 
 ### Install
@@ -99,6 +104,14 @@ export default defineConfig({
   ]
 })
 ```
+
+### Acknowledgements
+
+Thanks to [JetBrains](https://www.jetbrains.com/) for allocating free open-source licences for IDEs such as WebStorm.
+
+<p align="right">
+<img width="250px" height="250px" src="https://resources.jetbrains.com/storage/products/company/brand/logos/jb_square.png" alt="JetBrains Black Box Logo logo.">
+</p>
 
 ### LICENSE
 

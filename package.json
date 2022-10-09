@@ -6,9 +6,9 @@
   "module": "dist/index.esm.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "bump",
+    "build": "node bootstrap.js --build",
     "test": "ava",
-    "dev": "node dev.js",
+    "dev": "node bootstrap.js",
     "coverage": "c8 -r=lcov ava"
   },
   "keywords": [
