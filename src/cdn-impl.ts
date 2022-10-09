@@ -51,7 +51,7 @@ const serialize = (struct: Map<string, Required<TrackModule>>) => {
 
 const toString = (metas: ReturnType<typeof serialize>) => {
   const def = (origianl: (ScriptAttributes & Serialization) | (LinkAttrobites & Serialization)) => {
-    const { url, tag, ...rest } = origianl
+    const { url, tag, type, ...rest } = origianl
     const otherParams = Object.entries(rest).reduce((acc, [attr, v]) => {
       if (v) {
         if (typeof v === 'boolean') return (acc += (attr as string).toLowerCase())
@@ -59,7 +59,7 @@ const toString = (metas: ReturnType<typeof serialize>) => {
       }
       return acc
     }, '')
-    if (tag === 'link') return `<link ${otherParams} href="${url}" />`
+    if (tag === 'link') return `<link rel=${type} ${otherParams} href="${url}" />`
     return `<script ${otherParams} src="${url}"></script>`
   }
 
