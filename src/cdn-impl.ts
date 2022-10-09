@@ -203,11 +203,11 @@ export const cdn = (options: CDNPluginOptions = {}): Plugin => {
   return {
     name: 'vite-plugin-cdn',
     enforce: 'post',
-    transform(code, id) {
+    async transform(code, id) {
       if (id[0] === '\0') return
       if ([...finder.keys()].every((s) => !code.includes(s))) return
       const ast = this.parse(code) as AcornNode
-      const { code: parserd } = translate(ast, {
+      const { code: parserd } = await translate(ast, {
         finder,
         code: new MagicString(code)
       })
