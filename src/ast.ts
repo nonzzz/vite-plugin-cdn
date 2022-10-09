@@ -30,12 +30,12 @@ const ensureExportModule = (local: { name: string }, exported: { name: string },
     if (local.name === 'default') return globalName
     return `${globalName}.${local.name}`
   }
+  return `${globalName}.${local.name}`
+  // if (exported.name === 'default') {
+  //   return `${globalName}.${local.name}`
+  // }
 
-  if (exported.name === 'default') {
-    return `${globalName}.${local.name}`
-  }
-
-  return `${globalName}.${exported.name}`
+  // return `${globalName}.${exported.name}`
 }
 
 // We will analyzed the import and export syntax in source code.
@@ -149,10 +149,11 @@ const graph = async (
             // named export can cover a variety of situations.
             // ReExport :)
             const n = ensureExportModule(local, exported, alias)
-            pows.set(local.name === 'default' ? alias : local.name, {
+            const isDefault = exported.name === 'default'
+            pows.set(local.name === 'default' ? alias : isDefault ? local.name : exported.name, {
               alias: n,
               pos: [start, end],
-              isDefault: exported.name === 'default'
+              isDefault
             })
           })
     }
@@ -176,7 +177,6 @@ export const translate = async (
   const { weaks, pows } = await graph(nodes.body as never, finder)
   const s: string[] = []
   const es: string[] = []
-
   /**
    * eg:
    *  import Vue from 'vue'
@@ -219,6 +219,5 @@ export const translate = async (
   )
 
   code.append(es.reduce((acc, cur) => (acc += cur), ''))
-
   return { code }
 }

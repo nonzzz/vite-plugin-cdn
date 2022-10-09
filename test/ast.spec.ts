@@ -44,3 +44,18 @@ test('ExportNamedDeclaration but as default', async (t) => {
   const c = await mockRawCode(`export { default } from 'vue'`, { vue: 'Vue' })
   t.is(c, `const __export__Vue = Vue;\nexport default __export__Vue;\n`)
 })
+
+test('ExportAllDeclaration', async (t) => {
+  const c = await mockRawCode(`export * from 'no-bump'`, { 'no-bump': 'bump' })
+  t.is(c, 'export const build = bump.build;\nexport const define = bump.define;\nexport const watch = bump.watch;\n')
+})
+
+test('ExportNamedDeclaration but ReExport as default', async (t) => {
+  const c = await mockRawCode(`export { ref as default } from 'vue'`, { vue: 'Vue' })
+  t.is(c, `const ref = Vue.ref;\nexport default ref;\n`)
+})
+
+test('ExportNamedDeclaration but ReExport', async (t) => {
+  const c = await mockRawCode(`export { ref as Ref } from 'vue'`, { vue: 'Vue' })
+  t.is(c, `export const Ref = Vue.ref;\n`)
+})
