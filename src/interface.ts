@@ -8,11 +8,11 @@ export type PresetDomain = 'auto' | 'jsdelivr' | 'unpkg' | false
 
 export type Transformed = Array<
   | (ScriptAttributes &
-      Omit<Serialization, 'tag'> & {
+      Omit<Serialization, 'tag' | 'type'> & {
         tag: 'script'
       })
   | (LinkAttrobites &
-      Omit<Serialization, 'tag'> & {
+      Omit<Serialization, 'tag' | 'type'> & {
         tag: 'link'
       })
 >
