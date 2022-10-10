@@ -1,72 +1,14 @@
 import { Window } from 'happy-dom'
 import MagicString from 'magic-string'
-import { tryRequireModule, unique, ERRORS, error } from './shared'
+import { tryRequireModule, ERRORS, error } from './shared'
 import type { Plugin } from 'vite'
-import type {
-  TrackModule,
-  CDNPluginOptions,
-  PresetDomain,
-  ScriptAttributes,
-  LinkAttrobites,
-  Serialization,
-  Transformed,
-  AcornNode
-} from './interface'
+import type { TrackModule, CDNPluginOptions, PresetDomain, AcornNode } from './interface'
 import { translate } from './ast'
+import { ParserModuleStruct } from './dom'
 
 const PRESET_CDN_DOMAIN = {
   jsdelivr: 'https://cdn.jsdelivr.net/npm/',
   unpkg: 'https://unpkg.com/'
-}
-
-// refer: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script
-
-const serialize = (struct: Map<string, Required<TrackModule>>) => {
-  const getMeta = (str: string) => {
-    const suffix = str.split('.').pop()
-
-    const isScript = suffix === 'js'
-
-    return {
-      type: isScript ? '' : 'stylesheet',
-      tag: isScript ? 'script' : 'link',
-      isScript
-    } as Pick<Serialization, 'type' | 'tag'>
-  }
-
-  const parserd: Transformed = []
-  struct.forEach(({ spare }) => {
-    const final = unique(Array.isArray(spare) ? spare : [spare])
-    final.forEach((sp) => {
-      const { type, tag } = getMeta(sp)
-      parserd.push({
-        tag,
-        url: sp,
-        type
-      })
-    })
-  })
-  return parserd
-}
-
-const toString = (metas: ReturnType<typeof serialize>) => {
-  const def = (origianl: (ScriptAttributes & Serialization) | (LinkAttrobites & Serialization)) => {
-    const { url, tag, type, ...rest } = origianl
-    const otherParams = Object.entries(rest).reduce((acc, [attr, v]) => {
-      if (v) {
-        if (typeof v === 'boolean') return (acc += (attr as string).toLowerCase())
-        return (acc += `${(attr as string).toLowerCase()}="${v}"`)
-      }
-      return acc
-    }, '')
-    if (tag === 'link') return `<link rel=${type} ${otherParams} href="${url}" />`
-    return `<script ${otherParams} src="${url}"></script>`
-  }
-
-  return metas.reduce((acc, cur) => {
-    const r = def(cur) + '\n'
-    return (acc += r)
-  }, '')
 }
 
 const parserModuleImpl = (modules: TrackModule[], preset: PresetDomain) => {
@@ -218,9 +160,10 @@ export const cdn = (options: CDNPluginOptions = {}): Plugin => {
     },
     transformIndexHtml(raw: string) {
       if (!isProduction) return
-      const metas = serialize(finder)
-      if (options.transform) options.transform(metas)
-      const tpl = toString(metas)
+      const struct = new ParserModuleStruct(finder)
+      struct.format()
+      if (options.transform) options.transform(struct.modules)
+      const tpl = struct.toString()
       const window = new Window()
       const { document } = window
       document.body.innerHTML = raw

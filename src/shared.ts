@@ -13,8 +13,6 @@ export const tryRequireModule = <T>(module: string): T => {
   return _require(module) as T
 }
 
-export const unique = <T extends string[]>(original: T) => Array.from(new Set(original))
-
 export const ERRORS = {
   INVALID_PACKAGE: 'INVALID_PACKAGE',
   NO_PRESET_FIELDS: 'NO_PRESET_FIELDS',

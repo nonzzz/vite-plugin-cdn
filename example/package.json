@@ -1,5 +1,6 @@
 {
   "name": "vite-plugin-cdn2-example",
+  "private": "true",
   "scripts": {
     "dev": "vite",
     "build": "vite build"

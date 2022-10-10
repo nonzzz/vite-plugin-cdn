@@ -31,11 +31,6 @@ const ensureExportModule = (local: { name: string }, exported: { name: string },
     return `${globalName}.${local.name}`
   }
   return `${globalName}.${local.name}`
-  // if (exported.name === 'default') {
-  //   return `${globalName}.${local.name}`
-  // }
-
-  // return `${globalName}.${exported.name}`
 }
 
 // We will analyzed the import and export syntax in source code.
