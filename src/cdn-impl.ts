@@ -173,3 +173,5 @@ export const cdn = (options: CDNPluginOptions = {}): Plugin => {
     }
   }
 }
+
+cdn.version = '0.2.1'

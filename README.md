@@ -8,6 +8,16 @@ A Vite plugin that allowed you replace module with CDN. This plugin is designed 
 <img alt="GitHub Workflow Status" src="https://img.shields.io/github/workflow/status/nonzzz/vite-plugin-cdn/test?style=for-the-badge">
 </p>
 
+## Comparison
+
+|                        | [nonzzz/vite-plugin-cdn](https://github.com/nonzzz/vite-plugin-cdn) | [MMF-FE/vite-plugin-cdn-import](https://github.com/MMF-FE/vite-plugin-cdn-import) | [crcong/vite-plugin-externals](https://github.com/crcong/vite-plugin-externals/tree/main/src) |
+| ---------------------- | ------------------------------------------------------------------- | --------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| unit test case         | Yes                                                                 | NO                                                                                | Yes                                                                                           |
+| Support more scenarios | Yes                                                                 | No                                                                                | No                                                                                            |
+| Custom insert result   | Yes                                                                 | No                                                                                | Yes (But you need insert all source manally)                                                  |
+| Friendly error handing | Yes                                                                 | No                                                                                | No                                                                                            |
+| Mounted on window      | No                                                                  | No                                                                                | No                                                                                            |
+
 ## Quick Start
 
 ### Install
