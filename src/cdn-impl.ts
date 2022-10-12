@@ -146,6 +146,7 @@ export const cdn = (options: CDNPluginOptions = {}): Plugin => {
     name: 'vite-plugin-cdn',
     enforce: 'post',
     async transform(code, id) {
+      if (!isProduction) return
       if (id[0] === '\0') return
       if ([...finder.keys()].every((s) => !code.includes(s))) return
       const ast = this.parse(code) as AcornNode
@@ -174,4 +175,4 @@ export const cdn = (options: CDNPluginOptions = {}): Plugin => {
   }
 }
 
-cdn.version = '0.2.1'
+cdn.version = '0.2.2'
