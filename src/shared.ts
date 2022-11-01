@@ -17,7 +17,7 @@ export const ERRORS = {
   INVALID_PACKAGE: 'INVALID_PACKAGE',
   NO_PRESET_FIELDS: 'NO_PRESET_FIELDS',
   INVALID_PRESET: 'INVALID_PRESET'
-}
+} as const
 
 export const error = (native: Error | InternalError) => {
   if (!(native instanceof Error)) native = Object.assign(new Error(native.message), native)

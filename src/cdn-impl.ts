@@ -43,24 +43,15 @@ const parserModuleImpl = (modules: TrackModule[], preset: PresetDomain) => {
       )
 
       const monitor = (type: Exclude<PresetDomain, false>) => {
-        if (type === 'auto') {
-          // In auto mode. jsdelivr is first.
-          const real = jsdelivr ? jsdelivr : unpkg
-          if (!real)
-            error({
-              code: ERRORS.NO_PRESET_FIELDS,
-              message: ''
-            })
-          const type = jsdelivr ? 'jsdelivr' : 'unpkg'
-          return `${PRESET_CDN_DOMAIN[type]}${name}@${version}/${real}`
-        }
-        const real = type === 'jsdelivr' ? jsdelivr : type === 'unpkg' ? unpkg : undefined
-        if (!real)
+        const ensureResource =
+          type === 'jsdelivr' ? jsdelivr : type === 'unpkg' ? unpkg : type === 'auto' ? jsdelivr || unpkg : undefined
+        if (!ensureResource)
           error({
             code: ERRORS.NO_PRESET_FIELDS,
             message: ''
           })
-        return `${PRESET_CDN_DOMAIN[type]}${name}@${version}/${real}`
+        const autoType = jsdelivr ? 'jsdelivr' : 'unpkg'
+        return `${PRESET_CDN_DOMAIN[type === 'auto' ? autoType : type]}${name}@${version}/${ensureResource}`
       }
 
       /**
@@ -89,24 +80,18 @@ const parserModuleImpl = (modules: TrackModule[], preset: PresetDomain) => {
     } catch (err: any) {
       // https://www.typescriptlang.org/tsconfig#useUnknownInCatchVariables
       if (err.code) {
-        if (err.code === ERRORS.INVALID_PRESET) return error(err)
-        if (err.code === ERRORS.NO_PRESET_FIELDS) {
-          if (!spare?.length) {
-            bucket.push({
-              name,
-              type: 'NO_PRESET_FIELDS'
-            })
-          } else {
-            const latestSpare = Array.isArray(spare) ? spare : [spare]
-            const latestTrack = finder.get(name)
-            if (!latestTrack) {
-              const track = { name, global, spare: latestSpare }
-              finder.set(name, track)
-              return
-            }
-          }
-          return
+        switch (err.code) {
+          case ERRORS.INVALID_PACKAGE:
+            error(err)
+          case ERRORS.NO_PRESET_FIELDS:
+            if (!spare?.length)
+              return bucket.push({
+                name,
+                type: ERRORS.NO_PRESET_FIELDS
+              })
+            return finder.set(name, { name, global, spare })
         }
+        return
       }
       bucket.push({
         name,
