@@ -160,4 +160,4 @@ export const cdn = (options: CDNPluginOptions = {}): Plugin => {
   }
 }
 
-cdn.version = '0.2.2'
+cdn.version = '0.3.0'
