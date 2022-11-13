@@ -52,6 +52,7 @@ export type LinkAttrobites = Partial<
 export interface Serialization {
   url?: string
   type?: string
+  name: string
   tag: 'link' | 'script'
 }
 

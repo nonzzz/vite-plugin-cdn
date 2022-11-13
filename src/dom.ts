@@ -1,5 +1,5 @@
 // Unfortunately. I'm ava noob. `vite-cdn-plugin-2` is a pure esm
-// library. I can't find any way to define different `ts.config`
+// library. I can't find any way to define different `tsconfig`
 // for ava.
 // So as a temporary solution. compose part should be independent.
 
@@ -17,7 +17,8 @@ export class ParserModuleStruct {
   }
   toString() {
     return this.modules.reduce((acc, cur) => {
-      const { url, tag, ...rest } = cur
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { url, tag, name: _, ...rest } = cur
       const parameter = Object.entries(rest).reduce((acc, [attr, v]) => {
         if (v) {
           if (typeof v === 'boolean') return (acc += (attr as string).toLowerCase())
@@ -40,19 +41,26 @@ export class ParserModuleStruct {
   }
 
   format() {
-    const spares = Array.from(this.input.values())
-      .map(({ spare }) => unique(Array.isArray(spare) ? spare : [spare]))
-      .flat()
-    return spares.reduce((acc, cur) => {
-      const suffix = cur.split('.').pop()
-      const isScript = suffix === 'js'
+    const spares = Array.from(this.input.values()).reduce<Array<{ name: string; spare: string }>>(
+      (acc, { spare, name }) => {
+        if (Array.isArray(spare)) {
+          unique(spare).forEach((s) => acc.push({ name, spare: s }))
+          return acc
+        }
+        acc.push({ name, spare })
+        return acc
+      },
+      []
+    )
+    return spares.reduce<Transformed>((acc, { name, spare }) => {
       const meta: Transformed[number] = {
-        tag: isScript ? 'script' : 'link',
-        url: cur
+        tag: spare.split('.').pop() === 'js' ? 'script' : 'link',
+        url: spare,
+        name
       }
-      if (!isScript) Reflect.set(meta, 'rel', 'stylesheet')
+      if (meta.tag === 'link') meta.rel = 'stylesheet'
       acc.push(meta)
       return acc
-    }, [] as Transformed)
+    }, [])
   }
 }

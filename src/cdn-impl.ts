@@ -28,7 +28,7 @@ const parserModuleImpl = (modules: TrackModule[], preset: PresetDomain) => {
     }
 
     if (typeof preset === 'boolean' && !preset) {
-      if (!spare) {
+      if (!spare || !spare.length) {
         bucket.push(name)
         return
       }

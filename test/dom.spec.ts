@@ -20,7 +20,8 @@ test('script', (t) => {
   t.deepEqual(r.modules, [
     {
       tag: 'script',
-      url: 'https://www.test/prod.js'
+      url: 'https://www.test/prod.js',
+      name: 'vue'
     }
   ])
   const str = r.toString()
@@ -32,6 +33,7 @@ test('dyanmic script', (t) => {
   r.modules = [
     {
       tag: 'script',
+      name: 'Test',
       url: 'https://www.test/prod.js'
     }
   ]
@@ -51,11 +53,13 @@ test('link', (t) => {
   t.deepEqual(r.modules, [
     {
       tag: 'script',
+      name: '@fect-ui/vue',
       url: 'https://www.test/fect.js'
     },
     {
       rel: 'stylesheet',
       tag: 'link',
+      name: '@fect-ui/vue',
       url: 'https://www.test/fect.css'
     }
   ])
