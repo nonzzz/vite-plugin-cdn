@@ -149,7 +149,7 @@ export const cdn = (options: CDNPluginOptions = {}): Plugin => {
       const struct = new ParserModuleStruct(finder)
       let { modules } = struct
       if (options.transform) {
-        const res = options.transform(struct.modules)
+        const res = options.transform(modules)
         if (res) modules = res
       }
       struct.modules = modules
@@ -164,4 +164,4 @@ export const cdn = (options: CDNPluginOptions = {}): Plugin => {
   }
 }
 
-cdn.version = '0.3.0'
+cdn.version = '0.3.1'
