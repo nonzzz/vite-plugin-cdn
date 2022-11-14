@@ -147,8 +147,12 @@ export const cdn = (options: CDNPluginOptions = {}): Plugin => {
     transformIndexHtml(raw: string) {
       if (!isProduction) return
       const struct = new ParserModuleStruct(finder)
-      struct.format()
-      if (options.transform) options.transform(struct.modules)
+      let { modules } = struct
+      if (options.transform) {
+        const res = options.transform(struct.modules)
+        if (res) modules = res
+      }
+      struct.modules = modules
       const tpl = struct.toString()
       const window = new Window()
       const { document } = window

@@ -21,7 +21,7 @@ export interface CDNPluginOptions {
   modules?: Array<TrackModule>
   preset?: PresetDomain
   logInfo?: 'silent' | 'info'
-  transform?: (meta: Transformed) => void
+  transform?: (meta: Transformed) => void | Transformed
 }
 
 export type ScriptAttributes = Partial<

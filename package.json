@@ -17,6 +17,11 @@
     "cdn",
     "vite-plugin-cdn"
   ],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "author": "Kanno",
   "license": "MIT",
   "homepage": "https://github.com/nonzzz/vite-plugin-cdn",
