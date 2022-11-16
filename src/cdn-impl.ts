@@ -1,6 +1,6 @@
 import { Window } from 'happy-dom'
 import MagicString from 'magic-string'
-import { tryRequireModule, ERRORS, error } from './shared'
+import { tryRequireModule, ERRORS, error, requireResolve, lookup, tryRequireRealModule } from './shared'
 import type { Plugin } from 'vite'
 import type { TrackModule, CDNPluginOptions, PresetDomain, AcornNode } from './interface'
 import { translate } from './ast'
@@ -20,6 +20,38 @@ const parserModuleImpl = (modules: TrackModule[], preset: PresetDomain) => {
       }
   > = []
   const finder: Map<string, Required<TrackModule>> = new Map()
+
+  const monitor = (
+    type: Exclude<PresetDomain, false>,
+    {
+      jsdelivr,
+      unpkg,
+      version,
+      name
+    }: {
+      jsdelivr?: string
+      unpkg?: string
+      version: string
+      name: string
+    },
+    throwError?: boolean
+  ) => {
+    const ensureResource =
+      type === 'jsdelivr' ? jsdelivr : type === 'unpkg' ? unpkg : type === 'auto' ? jsdelivr || unpkg : undefined
+    if (!ensureResource) {
+      if (!throwError) {
+        return ERRORS.NO_PRESET_FIELDS
+      }
+      error({
+        code: ERRORS.NO_PRESET_FIELDS,
+        message: ''
+      })
+    }
+
+    const autoType = jsdelivr ? 'jsdelivr' : 'unpkg'
+    return `${PRESET_CDN_DOMAIN[type === 'auto' ? autoType : type]}${name}@${version}/${ensureResource}`
+  }
+
   modules.forEach((module, i) => {
     const { name, global, spare } = module
     if (!name || !global) {
@@ -35,35 +67,16 @@ const parserModuleImpl = (modules: TrackModule[], preset: PresetDomain) => {
       finder.set(name, { name, global, spare })
       return
     }
-    // In past. we always try to load the information from user node_modules. But if user pass an no exist package
-    // it will block process and interrupt. So we should catch it in us internal logic. I think it's a right way.
+
     try {
       const { version, unpkg, jsdelivr } = tryRequireModule<{ version: string; unpkg?: string; jsdelivr?: string }>(
         `${name}/package.json`
       )
-
-      const monitor = (type: Exclude<PresetDomain, false>) => {
-        const ensureResource =
-          type === 'jsdelivr' ? jsdelivr : type === 'unpkg' ? unpkg : type === 'auto' ? jsdelivr || unpkg : undefined
-        if (!ensureResource)
-          error({
-            code: ERRORS.NO_PRESET_FIELDS,
-            message: ''
-          })
-        const autoType = jsdelivr ? 'jsdelivr' : 'unpkg'
-        return `${PRESET_CDN_DOMAIN[type === 'auto' ? autoType : type]}${name}@${version}/${ensureResource}`
-      }
-
-      /**
-       * In some package that not provide the jsdelivr and unpkg filed. So that we'll got undefined.
-       * So for DX. we should check it if user pass spare option. we will concat them. If not, we will
-       * push to bucket.
-       */
       switch (preset) {
         case 'auto':
         case 'unpkg':
         case 'jsdelivr':
-          const track = { name, global, spare: [monitor(preset)] }
+          const track = { name, global, spare: [monitor(preset, { jsdelivr, unpkg, version, name }, true)] }
           if (spare?.length) {
             const latestSpare = Array.isArray(spare) ? spare : [spare]
             track.spare.push(...latestSpare)
@@ -90,6 +103,22 @@ const parserModuleImpl = (modules: TrackModule[], preset: PresetDomain) => {
                 type: ERRORS.NO_PRESET_FIELDS
               })
             return finder.set(name, { name, global, spare })
+          // In some libraries who set type=module will trigger this logic.
+          case ERRORS.ERR_PACKAGE_PATH_NOT_EXPORTED:
+            const modulePath = requireResolve(name)
+            const { version, jsdelivr, unpkg } = tryRequireRealModule<{
+              version: string
+              unpkg?: string
+              jsdelivr?: string
+            }>(lookup(modulePath, 'package.json'))
+            const link = monitor(preset, { jsdelivr, unpkg, version, name })
+            if (link === ERRORS.NO_PRESET_FIELDS) return bucket.push({ name, type: ERRORS.NO_PRESET_FIELDS })
+            const track = { name, global, spare: [link] }
+            if (spare?.length) {
+              const latestSpare = Array.isArray(spare) ? spare : [spare]
+              track.spare.push(...latestSpare)
+            }
+            finder.set(name, track)
         }
         return
       }
