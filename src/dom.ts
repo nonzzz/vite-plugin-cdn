@@ -21,8 +21,8 @@ export class ParserModuleStruct {
       const { url, tag, name: _, ...rest } = cur
       const parameter = Object.entries(rest).reduce((acc, [attr, v]) => {
         if (v) {
-          if (typeof v === 'boolean') return (acc += (attr as string).toLowerCase())
-          return (acc += `${(attr as string).toLowerCase()}="${v}"`)
+          if (typeof v === 'boolean') return (acc += `${(attr as string).toLowerCase()} `)
+          return (acc += `${(attr as string).toLowerCase()}="${v}" `)
         }
         return acc
       }, '')

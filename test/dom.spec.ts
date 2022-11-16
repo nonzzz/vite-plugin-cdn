@@ -66,6 +66,6 @@ test('link', (t) => {
   const str = r.toString()
   t.is(
     str,
-    '<script  src="https://www.test/fect.js"></script>\n<link rel="stylesheet" href="https://www.test/fect.css" />\n'
+    '<script  src="https://www.test/fect.js"></script>\n<link rel="stylesheet"  href="https://www.test/fect.css" />\n'
   )
 })
