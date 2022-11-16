@@ -74,7 +74,7 @@ export interface CDNPluginOptions {
   /**
    * Transform can replace the capture result. and rewrite them.
    */
-  transform?: (meta: Transformed) => void
+  transform?: (meta: Transformed) => void | Transformed
 }
 ```
 
