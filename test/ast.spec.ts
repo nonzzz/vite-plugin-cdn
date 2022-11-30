@@ -47,7 +47,10 @@ test('ExportNamedDeclaration but as default', async (t) => {
 
 test('ExportAllDeclaration', async (t) => {
   const c = await mockRawCode(`export * from 'no-bump'`, { 'no-bump': 'bump' })
-  t.is(c, 'export const build = bump.build;\nexport const define = bump.define;\nexport const watch = bump.watch;\n')
+  t.is(
+    c,
+    'export const build = bump.build;\nexport const define = bump.define;\nexport const watch = bump.watch;\nconst bump = bump.default;\nexport default bump;\n'
+  )
 })
 
 test('ExportNamedDeclaration but ReExport as default', async (t) => {
