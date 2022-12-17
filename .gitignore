@@ -2,4 +2,7 @@ node_modules
 dist
 test/__fake_*
 
+.yarn/cache
+.yarn/install-state.gz
+
 coverage
