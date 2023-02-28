@@ -57,6 +57,7 @@
     ]
   },
   "dependencies": {
+    "@rollup/pluginutils": "^5.0.2",
     "happy-dom": "^6.0.4",
     "magic-string": "^0.26.4"
   },
