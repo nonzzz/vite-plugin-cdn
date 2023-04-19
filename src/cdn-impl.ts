@@ -1,6 +1,6 @@
 import { Window } from 'happy-dom'
 import MagicString from 'magic-string'
-import { tryRequireModule, ERRORS, error, requireResolve, lookup, tryRequireRealModule } from './shared'
+// import { tryRequireModule, ERRORS, error, requireResolve, lookup, tryRequireRealModule } from './shared'
 import type { Plugin } from 'vite'
 import type { TrackModule, CDNPluginOptions, PresetDomain, AcornNode } from './interface'
 import { translate } from './ast'
