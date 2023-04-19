@@ -85,7 +85,7 @@ export interface CDNPluginOptions {
 
 import { defineConfig } from 'vite'
 
-import { cdn } from 'vite-pluginp-cdn2'
+import { cdn } from 'vite-plugin-cdn2'
 
 export default defineConfig({
   plugins: [
@@ -107,8 +107,12 @@ export default defineConfig({
         }
       ],
       preset: false,
-      transform(result) {
-        if (result.tag === 'script') result.defer = true
+      transform(results) {
+        results.forEach((result) => {
+          if (result.tag === 'script') {
+            result.defer = true
+          }
+        })
       }
     })
   ]
