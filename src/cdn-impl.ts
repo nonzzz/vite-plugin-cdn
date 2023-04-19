@@ -186,8 +186,11 @@ export const cdn = (options: CDNPluginOptions = {}): Plugin => {
       const window = new Window()
       const { document } = window
       document.body.innerHTML = raw
-      const headEl = document.body.querySelector('head')
-      headEl.insertAdjacentHTML('beforeend', tpl)
+      // fix：调整cdn插入的位置，从head末尾移动到title标签之前，解决如果cdn的script加了defer属性，和页面module加载顺序的问题
+      // const headEl = document.body.querySelector('head')
+      // headEl.insertAdjacentHTML('beforeend', tpl)
+      const titleEl = document.body.querySelector('title')
+      titleEl.insertAdjacentHTML('beforebegin', tpl)
       return document.body.innerHTML
     }
   }
