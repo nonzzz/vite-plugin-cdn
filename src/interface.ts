@@ -1,6 +1,6 @@
 export interface TrackModule {
   name: string
-  global: string
+  global?: string
   spare?: Array<string> | string
 }
 
@@ -18,9 +18,10 @@ export type Transformed = Array<
 >
 export interface CDNPluginOptions {
   isProduction?: boolean
-  modules?: Array<TrackModule>
+  modules?: Array<TrackModule | string>
   preset?: PresetDomain
   logInfo?: 'silent' | 'info'
+  mode?: PresetDomain
   transform?: (meta: Transformed) => void | Transformed
 }
 

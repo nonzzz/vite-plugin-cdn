@@ -1,103 +1,45 @@
-// import perfHooks from 'node/perf_hooks'
-import MagicString from 'magic-string'
-import { parse } from 'rs-module-lexer'
-import { hasOwn, len } from './shared'
-import type { ImportSpecifier, ExportSpecifier } from 'rs-module-lexer'
-import type { ResolvedConfig } from 'vite'
+import { createVM } from './vm'
+import type { PresetDomain, TrackModule } from './interface'
 
-import type { TrackModule } from './interface'
+function createWorkerThreads(worker_threads: typeof import('worker_threads'), modules: Array<TrackModule>) {
+  const { port1: mainPort, port2: workerPort } = new worker_threads.MessageChannel()
+  const worker = new worker_threads.Worker(__filename, {})
 
-class Lexer {
-  code: string
-  pos: number
-  char: string
-  constructor(code: string) {
-    this.code = code
-    this.pos = 0
-    this.char = this.code[this.pos]
+  const runSync = () => {
+    const sharedBuffer = new SharedArrayBuffer(8)
+    const sharedBufferView = new Int32Array(sharedBuffer)
+    worker.postMessage(modules)
+
+    const status = Atomics.wait(sharedBufferView, 0, 0)
+    if (status !== 'ok' && status !== 'not-equal') throw new Error('Internal error: Atomics.wait() failed: ' + status)
+    const { message } = worker_threads.receiveMessageOnPort(mainPort)!
   }
-  step() {
-    //
-  }
-  eat() {
-    //
-  }
-  next() {
-    //
-  }
+
+  return runSync()
 }
 
-function createLexer(code: string) {
-  return new Lexer(code)
-}
-
-function captureModule(code: string, s: number, e: number) {
-  const raw = code.substring(s, e)
-  const lexer = createLexer(raw)
-  // lexer.next()
-}
-
-function handleDependencies(
-  imports: ImportSpecifier[],
-  exports: ExportSpecifier[],
-  dependencies: Record<string, string>,
-  code: string
-) {
-  if (!len(imports) && !len(exports)) return code
-  const magic = new MagicString(code)
-  // const importerLast = imports.
-  imports.forEach((importer) => {
-    // console.log(importer)
-    // console.log(code.substring(importer.ss + 6, importer.se))
-    if (importer.n && hasOwn(dependencies, importer.n)) {
-      const moduleGlobalName = dependencies[importer.n]
-      captureModule(code, importer.ss, importer.se)
-      magic.remove(importer.ss + 6, importer.se)
-    }
-  })
-  console.log(magic.toString())
-}
-
-export class Scanner {
+class Scanner {
+  mode: PresetDomain
   modules: Array<TrackModule>
-  private _dependencies: Array<string>
-  private _dependenciesGraph: Record<string, string>
-  constructor(modules: Array<TrackModule> = []) {
-    this.modules = modules
-    this._dependencies = []
-    this._dependenciesGraph = Object.create(null)
+  private vm: ReturnType<typeof createVM>
+  constructor(modules: Array<TrackModule | string>, mode: PresetDomain) {
+    this.mode = mode
+    this.modules = this.serialization(modules)
+    this.vm = createVM()
   }
-  // scan all dependencies is implement for find file import & export module
-  // if don't exist we will pass.
-  scanAllDependencies(filename: string, code: string) {
-    const { output } = parse({
-      input: [{ filename, code }]
+  public async scanAllDependencies() {
+    const worker_threads = await import('worker_threads')
+    createWorkerThreads(worker_threads, this.modules)
+  }
+  private serialization(modules: Array<TrackModule | string>) {
+    // return []
+    return modules.map((module) => {
+      if (typeof module === 'string') return { name: module }
+      return module
     })
-    // eslint-disable-next-line prefer-destructuring
-    const { imports, exports } = output[0]
-    return handleDependencies(imports, exports, this.dependenciesGraph, code)
-  }
-  extraDependencies(viteConf: ResolvedConfig) {
-    viteConf.build.rollupOptions = {
-      ...viteConf.build.rollupOptions,
-      external: this.dependencies
-    }
-  }
-
-  get dependencies() {
-    if (!this._dependencies.length) {
-      this._dependencies = this.modules.map((v) => v.name)
-    }
-    return this._dependencies
-  }
-  get dependenciesGraph() {
-    if (!this._dependencies.length) {
-      this._dependenciesGraph = this.modules.reduce((acc, { name, global }) => ({ ...acc, [name]: global }), {})
-    }
-    return this._dependenciesGraph
   }
 }
 
-export function createScanner(modules: Array<TrackModule>) {
-  return new Scanner(modules)
+export function createScanner(modules: Array<TrackModule | string>, mode: PresetDomain) {
+  return new Scanner(modules, mode)
 }
