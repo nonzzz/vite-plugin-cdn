@@ -6,6 +6,14 @@ export interface TrackModule {
 
 export type PresetDomain = 'auto' | 'jsdelivr' | 'unpkg' | false
 
+export interface IIFEModuleInfo {
+  version: string
+  mode: PresetDomain
+  name: string
+  unpkg?: string
+  jsdelivr?: string
+}
+
 export type Transformed = Array<
   | (ScriptAttributes &
       Omit<Serialization, 'tag' | 'type'> & {
