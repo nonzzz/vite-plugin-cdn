@@ -116,6 +116,8 @@ class Scanner {
   get moduleNames() {
     return Object.keys(this.dependencies)
   }
+  // TODO
+  // Record can't be resolved module.
 }
 
 export function createScanner(modules: Array<TrackModule | string>) {

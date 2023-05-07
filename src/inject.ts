@@ -24,8 +24,8 @@ class InjectScript {
     //
   }
   inject(html: string, transformHook: undefined | CDNPluginOptions['transform']) {
-    // const { document } = this.window
-    // document.body.innerHTML = html
+    const { document } = this.window
+    document.body.innerHTML = html
     if (transformHook) {
       const hook = transformHook()
       for (const module of this.modules) {
@@ -36,6 +36,10 @@ class InjectScript {
         }
       }
     }
+    //issue #6
+    // const element = document.body.querySelector('title')
+    // element.insertAdjacentElement('beforebegin', '')
+    return document.body.innerHTML
   }
   private prepareModules(input: Record<string, IIFEModuleInfo>, mode: PresetDomain) {
     const result: Array<ScriptNode | LinkNode> = []

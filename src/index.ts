@@ -47,7 +47,7 @@ function cdn(opts: CDNPluginOptions = {}): Plugin {
     },
     transformIndexHtml(html) {
       const inject = createInjectScript(scanner.dependencies, mode)
-      inject.inject(html, opts.transform)
+      return inject.inject(html, opts.transform)
     }
   }
 }
