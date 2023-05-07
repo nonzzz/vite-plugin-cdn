@@ -3,10 +3,10 @@
   "version": "0.3.3",
   "description": "A Vite plugin that allowed you replace module with CDN",
   "main": "dist/index.cjs.js",
-  "module": "dist/index.esm.js",
+  "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "bump -c",
+    "build": "bump",
     "test": "ava",
     "dev": "bump -w",
     "coverage": "c8 -r=lcov ava"
@@ -41,7 +41,7 @@
     "eslint": "^8.23.1",
     "eslint-config-kagura": "^1.0.3",
     "eslint-config-prettier": "^8.5.0",
-    "no-bump": "^0.6.2",
+    "no-bump": "^0.7.1",
     "prettier": "^2.4.1",
     "rollup-plugin-dts": "^5.0.0",
     "ts-node": "^10.9.1",

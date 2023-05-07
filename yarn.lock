@@ -2023,10 +2023,10 @@ natural-compare@^1.4.0:
   resolved "https://registry.yarnpkg.com/natural-compare/-/natural-compare-1.4.0.tgz#4abebfeed7541f2c27acfb29bdbbd15c8d5ba4f7"
   integrity sha512-OWND8ei3VtNC9h7V60qff3SVobHr996CTwgxubgyQYEpg290h9J0buyECNNJexkFm5sOajh5G116RYA1c8ZMSw==
 
-no-bump@^0.6.2:
-  version "0.6.2"
-  resolved "https://registry.yarnpkg.com/no-bump/-/no-bump-0.6.2.tgz#e098f19d7200e6b32bda3188938e316b95df1bae"
-  integrity sha512-9CQ/YdGqLYywjC4Tmm+r5SFIRZ1gzLLt4nuGi7xgGq22vPWHlVaAHvF/7Dg4XXexBUcXsZ6qWFKGEwi1qRl3Lg==
+no-bump@^0.7.1:
+  version "0.7.1"
+  resolved "https://registry.yarnpkg.com/no-bump/-/no-bump-0.7.1.tgz#b49b1d0c67d9d872bda62e476eb90ea000fc1009"
+  integrity sha512-bCiYMb6RuIOcogP/HAYsWe9pLLCM1c8Ft9WWDSUjvDlkbogBmBlWR35C5h7AkvYn7MimPwgxtlNmdVhpYImb3w==
   dependencies:
     "@rollup/plugin-alias" "^4.0.2"
     "@rollup/plugin-commonjs" "^23.0.3"
@@ -2037,6 +2037,7 @@ no-bump@^0.6.2:
     lodash.merge "^4.6.2"
     rollup "^3.5.0"
     rollup-plugin-swc3 "^0.7.0"
+    yargs-parser "21.1.1"
 
 node-fetch@^2.x.x:
   version "2.6.9"
@@ -2799,15 +2800,15 @@ yallist@^4.0.0:
   resolved "https://registry.yarnpkg.com/yallist/-/yallist-4.0.0.tgz#9bb92790d9c0effec63be73519e11a35019a3a72"
   integrity sha512-3wdGidZyq5PB084XLES5TpOSRA3wjXAlIWMhum2kRcv/41Sn2emQ0dycQW4uZXLejwKvg6EsvbdlVL+FYEct7A==
 
+yargs-parser@21.1.1, yargs-parser@^21.1.1:
+  version "21.1.1"
+  resolved "https://registry.yarnpkg.com/yargs-parser/-/yargs-parser-21.1.1.tgz#9096bceebf990d21bb31fa9516e0ede294a77d35"
+  integrity sha512-tVpsJW7DdjecAiFpbIB1e3qxIQsE6NoPc5/eTdrbbIC4h0LVsWhnoa3g+m2HclBIujHzsxZ4VJVA+GUuc2/LBw==
+
 yargs-parser@^20.2.2, yargs-parser@^20.2.9:
   version "20.2.9"
   resolved "https://registry.yarnpkg.com/yargs-parser/-/yargs-parser-20.2.9.tgz#2eb7dc3b0289718fc295f362753845c41a0c94ee"
   integrity sha512-y11nGElTIV+CT3Zv9t7VKl+Q3hTQoT9a1Qzezhhl6Rp21gJ/IVTW7Z3y9EWXhuUBC2Shnf+DX0antecpAwSP8w==
-
-yargs-parser@^21.1.1:
-  version "21.1.1"
-  resolved "https://registry.yarnpkg.com/yargs-parser/-/yargs-parser-21.1.1.tgz#9096bceebf990d21bb31fa9516e0ede294a77d35"
-  integrity sha512-tVpsJW7DdjecAiFpbIB1e3qxIQsE6NoPc5/eTdrbbIC4h0LVsWhnoa3g+m2HclBIujHzsxZ4VJVA+GUuc2/LBw==
 
 yargs@^16.2.0:
   version "16.2.0"

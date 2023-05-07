@@ -1,48 +1,47 @@
 import fsp from 'fs/promises'
+import worker_threads from 'worker_threads'
 import { createConcurrentQueue, createVM, MAX_CONCURRENT } from './vm'
-import { lookup, uniq } from './shared'
+import { is, lookup, uniq } from './shared'
 import type { MessagePort } from 'worker_threads'
 import type { PresetDomain, TrackModule, IIFEModuleInfo } from './interface'
 
 interface WorkerData {
-  scannerContext: Scanner
+  scannerModule: TrackModule[]
+  mode: PresetDomain
   workerPort: MessagePort
   internalThread: boolean
+  sharedBuffer: SharedArrayBuffer
 }
 
-function createWorkerThreads(worker_threads: typeof import('worker_threads'), scannerContext: Scanner) {
+function createWorkerThreads(scannerModule: TrackModule[], mode: PresetDomain) {
   const { port1: mainPort, port2: workerPort } = new worker_threads.MessageChannel()
 
   const worker = new worker_threads.Worker(__filename, {
-    workerData: { workerPort, internalThread: true },
+    workerData: { workerPort, internalThread: true, mode, scannerModule },
     transferList: [workerPort],
     execArgv: []
   })
 
+  // record thread id
   const id = 0
 
   const runSync = () => {
-    worker.postMessage({ id, scannerContext })
-    const message = worker_threads.receiveMessageOnPort(mainPort)
-    // worker.terminate()
-    console.log(message)
+    const sharedBuffer = new SharedArrayBuffer(8)
+    const sharedBufferView = new Int32Array(sharedBuffer)
+    worker.postMessage({ id, sharedBuffer })
+    const status = Atomics.wait(sharedBufferView, 0, 0)
+    if (status !== 'ok' && status !== 'not-equal') throw new Error('Internal error: Atomics.wait() failed: ' + status)
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const { message } = worker_threads.receiveMessageOnPort(mainPort)!
+    if (message.id !== id) throw new Error(`Internal error: Expected id ${id} but got id ${message.id}`)
+    return message.resolved
   }
-
-  runSync()
-  // const runSync = () => {
-  //   const sharedBuffer = new SharedArrayBuffer(8)
-  //   const sharedBufferView = new Int32Array(sharedBuffer)
-  //   // worker.postMessage()
-
-  //   const status = Atomics.wait(sharedBufferView, 0, 0)
-  //   if (status !== 'ok' && status !== 'not-equal') throw new Error('Internal error: Atomics.wait() failed: ' + status)
-  //   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  //   const { message } = worker_threads.receiveMessageOnPort(mainPort)!
-  // }
-  // worker.unref()
+  worker.unref()
+  return runSync()
 }
 
-async function tryRequireIIFEModule(moduleName: string, mode: PresetDomain, vm: ReturnType<typeof createVM>) {
+async function tryRequireIIFEModule(module: TrackModule, mode: PresetDomain, vm: ReturnType<typeof createVM>) {
+  const { name: moduleName, ...rest } = module
   const packageJson: IIFEModuleInfo & { browser: string } = Object.create(null)
   let packageJsonPath = ''
   try {
@@ -65,60 +64,60 @@ async function tryRequireIIFEModule(moduleName: string, mode: PresetDomain, vm: 
   if (!iifeRelativePath) return
   const iifeFilePath = lookup(packageJsonPath, iifeRelativePath)
   const code = await fsp.readFile(iifeFilePath, 'utf8')
-  vm.run(code, { version, name, unpkg, jsdelivr, mode })
+  vm.run(code, { version, name, unpkg, jsdelivr, mode, ...rest })
 }
 
-function startSyncThreads(worker_threads: typeof import('worker_threads')) {
+function startSyncThreads() {
   if (!worker_threads.workerData.internalThread) return
-  const { workerPort } = worker_threads.workerData as WorkerData
+  const { workerPort, mode, scannerModule } = worker_threads.workerData as WorkerData
   const { parentPort } = worker_threads
+  const vm = createVM()
   parentPort?.on('message', (msg) => {
     ;(async () => {
+      const { id, sharedBuffer } = msg
+      const sharedBufferView = new Int32Array(sharedBuffer)
       try {
-        const { id, scannerContext } = msg
         const queue = createConcurrentQueue(MAX_CONCURRENT)
-        for (const module of scannerContext.modules) {
-          queue.enqueue(() => tryRequireIIFEModule(module.name, scannerContext.mode, scannerContext.vm))
+        for (const module of scannerModule) {
+          queue.enqueue(() => tryRequireIIFEModule(module, mode, vm))
         }
         await queue.wait()
-        workerPort.postMessage({ resolved: scannerContext.vm.bindings, id })
+        workerPort.postMessage({ resolved: vm.bindings, id })
       } catch (error) {
         //
       }
+      Atomics.add(sharedBufferView, 0, 1)
+      Atomics.notify(sharedBufferView, 0, Infinity)
     })()
   })
+}
+
+if (worker_threads.workerData?.internalThread) {
+  startSyncThreads()
 }
 
 class Scanner {
   mode: PresetDomain
   modules: Array<TrackModule>
-  vm: ReturnType<typeof createVM>
+  dependencies: Record<string, IIFEModuleInfo>
   constructor(modules: Array<TrackModule | string>, mode: PresetDomain) {
     this.mode = mode
     this.modules = this.serialization(modules)
-    this.vm = createVM()
+    this.dependencies = {}
   }
-  public async scanAllDependencies() {
-    // const worker_threads = await import('worker_threads')
-    // createWorkerThreads(worker_threads, this)
-    // if (worker_threads.parentPort) {
-    //   startSyncThreads(worker_threads)
-    // }
-    const queue = createConcurrentQueue(MAX_CONCURRENT)
-    for (const module of this.modules) {
-      queue.enqueue(() => tryRequireIIFEModule(module.name, this.mode, this.vm))
-    }
-    await queue.wait()
+  public scanAllDependencies() {
+    this.dependencies = createWorkerThreads(this.modules, this.mode)
   }
   private serialization(modules: Array<TrackModule | string>) {
+    is(!Array.isArray(modules), 'vite-plugin-cdn2: option module must be array')
     return uniq(modules).map((module) => {
       if (typeof module === 'string') return { name: module }
       return module
     })
   }
 
-  get bindings() {
-    return this.vm.bindings
+  get moduleNames() {
+    return Object.keys(this.dependencies)
   }
 }
 

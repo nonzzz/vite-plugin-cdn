@@ -6,7 +6,7 @@ export interface TrackModule {
 
 export type PresetDomain = 'auto' | 'jsdelivr' | 'unpkg' | false
 
-export interface IIFEModuleInfo {
+export interface IIFEModuleInfo extends Pick<TrackModule, 'spare'> {
   version: string
   mode: PresetDomain
   name: string

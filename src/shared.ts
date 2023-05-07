@@ -1,27 +1,6 @@
 import path from 'path'
 import fs from 'fs'
-// import { createRequire } from 'module'
-// import type { InternalError } from './interface'
 import process from 'process'
-
-// /**
-//  * Currently, i used ignored to disabled the warn in terminal. Because from the
-//  * ava document. i can't found any way to set different  tsconfig for it compiler.
-//  */
-// // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// // @ts-ignored
-// const _require = createRequire(import.meta.url)
-
-// export const requireResolve = (module: string): string => _require.resolve(module)
-
-// export const tryRequireModule = <T>(module: string): T => {
-//   return _require(module) as T
-// }
-
-// export const tryRequireRealModule = <T>(module: string): T => {
-//   const str = fs.readFileSync(module, 'utf8')
-//   return JSON.parse(str)
-// }
 
 export function lookup(entry: string, target: string): string {
   const dir = path.dirname(entry)
@@ -58,4 +37,10 @@ export function isSupportThreads(): [boolean, string] {
     return [false, `${major}.${minor}`]
   }
   return [true, `${major}.${minor}`]
+}
+
+export function is(condit: boolean, message: string) {
+  if (!condit) {
+    throw new Error(message)
+  }
 }
