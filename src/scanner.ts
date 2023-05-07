@@ -3,21 +3,20 @@ import worker_threads from 'worker_threads'
 import { createConcurrentQueue, createVM, MAX_CONCURRENT } from './vm'
 import { is, lookup, uniq } from './shared'
 import type { MessagePort } from 'worker_threads'
-import type { PresetDomain, TrackModule, IIFEModuleInfo } from './interface'
+import type { TrackModule, IIFEModuleInfo } from './interface'
 
 interface WorkerData {
   scannerModule: TrackModule[]
-  mode: PresetDomain
   workerPort: MessagePort
   internalThread: boolean
   sharedBuffer: SharedArrayBuffer
 }
 
-function createWorkerThreads(scannerModule: TrackModule[], mode: PresetDomain) {
+function createWorkerThreads(scannerModule: TrackModule[]) {
   const { port1: mainPort, port2: workerPort } = new worker_threads.MessageChannel()
 
   const worker = new worker_threads.Worker(__filename, {
-    workerData: { workerPort, internalThread: true, mode, scannerModule },
+    workerData: { workerPort, internalThread: true, scannerModule },
     transferList: [workerPort],
     execArgv: []
   })
@@ -40,7 +39,7 @@ function createWorkerThreads(scannerModule: TrackModule[], mode: PresetDomain) {
   return runSync()
 }
 
-async function tryRequireIIFEModule(module: TrackModule, mode: PresetDomain, vm: ReturnType<typeof createVM>) {
+async function tryRequireIIFEModule(module: TrackModule, vm: ReturnType<typeof createVM>) {
   const { name: moduleName, ...rest } = module
   const packageJson: IIFEModuleInfo & { browser: string } = Object.create(null)
   let packageJsonPath = ''
@@ -64,12 +63,12 @@ async function tryRequireIIFEModule(module: TrackModule, mode: PresetDomain, vm:
   if (!iifeRelativePath) return
   const iifeFilePath = lookup(packageJsonPath, iifeRelativePath)
   const code = await fsp.readFile(iifeFilePath, 'utf8')
-  vm.run(code, { version, name, unpkg, jsdelivr, mode, ...rest })
+  vm.run(code, { version, name, unpkg, jsdelivr, ...rest })
 }
 
 function startSyncThreads() {
   if (!worker_threads.workerData.internalThread) return
-  const { workerPort, mode, scannerModule } = worker_threads.workerData as WorkerData
+  const { workerPort, scannerModule } = worker_threads.workerData as WorkerData
   const { parentPort } = worker_threads
   const vm = createVM()
   parentPort?.on('message', (msg) => {
@@ -79,7 +78,7 @@ function startSyncThreads() {
       try {
         const queue = createConcurrentQueue(MAX_CONCURRENT)
         for (const module of scannerModule) {
-          queue.enqueue(() => tryRequireIIFEModule(module, mode, vm))
+          queue.enqueue(() => tryRequireIIFEModule(module, vm))
         }
         await queue.wait()
         workerPort.postMessage({ resolved: vm.bindings, id })
@@ -97,16 +96,14 @@ if (worker_threads.workerData?.internalThread) {
 }
 
 class Scanner {
-  mode: PresetDomain
   modules: Array<TrackModule>
   dependencies: Record<string, IIFEModuleInfo>
-  constructor(modules: Array<TrackModule | string>, mode: PresetDomain) {
-    this.mode = mode
+  constructor(modules: Array<TrackModule | string>) {
     this.modules = this.serialization(modules)
     this.dependencies = {}
   }
   public scanAllDependencies() {
-    this.dependencies = createWorkerThreads(this.modules, this.mode)
+    this.dependencies = createWorkerThreads(this.modules)
   }
   private serialization(modules: Array<TrackModule | string>) {
     is(!Array.isArray(modules), 'vite-plugin-cdn2: option module must be array')
@@ -121,6 +118,6 @@ class Scanner {
   }
 }
 
-export function createScanner(modules: Array<TrackModule | string>, mode: PresetDomain) {
-  return new Scanner(modules, mode)
+export function createScanner(modules: Array<TrackModule | string>) {
+  return new Scanner(modules)
 }

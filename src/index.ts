@@ -6,7 +6,7 @@ import type { CDNPluginOptions } from './interface'
 
 function cdn(opts: CDNPluginOptions = {}): Plugin {
   const { modules = [], mode = 'auto' } = opts
-  const scanner = createScanner(modules, mode)
+  const scanner = createScanner(modules)
   return {
     name: 'vite-plugin-cdn',
     enforce: 'post',
@@ -42,8 +42,11 @@ function cdn(opts: CDNPluginOptions = {}): Plugin {
       }
       config.build.rollupOptions.external = [...scanner.moduleNames, external]
     },
+    async transform(code, id) {
+      //
+    },
     transformIndexHtml(html) {
-      const inject = createInjectScript(scanner.dependencies)
+      const inject = createInjectScript(scanner.dependencies, mode)
       inject.inject(html, opts.transform)
     }
   }
@@ -53,4 +56,4 @@ export { cdn }
 
 export default cdn
 
-export type { Transformed, PresetDomain, TrackModule } from './interface'
+export type { InjectVisitor, PresetDomain, TrackModule } from './interface'

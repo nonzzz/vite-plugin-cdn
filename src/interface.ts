@@ -8,29 +8,34 @@ export type PresetDomain = 'auto' | 'jsdelivr' | 'unpkg' | false
 
 export interface IIFEModuleInfo extends Pick<TrackModule, 'spare'> {
   version: string
-  mode: PresetDomain
   name: string
+  globalName?: string
   unpkg?: string
   jsdelivr?: string
 }
 
-export type Transformed = Array<
-  | (ScriptAttributes &
-      Omit<Serialization, 'tag' | 'type'> & {
-        tag: 'script'
-      })
-  | (LinkAttrobites &
-      Omit<Serialization, 'tag' | 'type'> & {
-        tag: 'link'
-      })
->
+export type ScriptNode = ScriptAttributes &
+  Omit<Serialization, 'tag' | 'type'> & {
+    tag: 'script'
+  }
+
+export type LinkNode = LinkAttrobites &
+  Omit<Serialization, 'tag' | 'type'> & {
+    tag: 'link'
+  }
+
+export interface InjectVisitor {
+  script?: (node: ScriptNode) => void
+  link?: (node: LinkNode) => void
+}
+
 export interface CDNPluginOptions {
   isProduction?: boolean
   modules?: Array<TrackModule | string>
   preset?: PresetDomain
   logInfo?: 'silent' | 'info'
   mode?: PresetDomain
-  transform?: (meta: Transformed) => void | Transformed
+  transform?: () => InjectVisitor
 }
 
 export type ScriptAttributes = Partial<

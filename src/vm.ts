@@ -13,7 +13,7 @@ export function createVM() {
     const globalName = Object.keys(context).pop()
     if (!globalName) return
     if (!bindings[opt.name]) {
-      bindings[opt.name] = { ...opt, name: globalName }
+      bindings[opt.name] = { ...opt, globalName }
     }
   }
   return { run, bindings }
