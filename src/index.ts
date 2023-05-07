@@ -33,20 +33,20 @@ function cdn(opts: CDNPluginOptions = {}): Plugin {
       const { external } = config.build.rollupOptions as Required<ResolvedBuildOptions['rollupOptions']>
       if (typeof external === 'function') {
         config.logger.warnOnce(`'rollupOptions.external' is a function. It's may casue not work as expected.`)
-        config.build.rollupOptions.external = [...scanner.moduleNames]
+        config.build.rollupOptions.external = [...scanner.dependModuleNames]
         return
       }
       if (Array.isArray(external)) {
-        external.push(...scanner.moduleNames)
+        external.push(...scanner.dependModuleNames)
         return
       }
-      config.build.rollupOptions.external = [...scanner.moduleNames, external]
+      config.build.rollupOptions.external = [...scanner.dependModuleNames, external]
     },
     async transform(code, id) {
       //
     },
     transformIndexHtml(html) {
-      const inject = createInjectScript(scanner.dependencies, mode)
+      const inject = createInjectScript(scanner.dependencies, scanner.dependModuleNames, mode)
       return inject.inject(html, opts.transform)
     }
   }

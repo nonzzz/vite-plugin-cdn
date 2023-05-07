@@ -6,10 +6,8 @@ export interface TrackModule {
 
 export type PresetDomain = 'auto' | 'jsdelivr' | 'unpkg' | false
 
-export interface IIFEModuleInfo extends Pick<TrackModule, 'spare'> {
+export interface IIFEModuleInfo extends TrackModule {
   version: string
-  name: string
-  globalName?: string
   unpkg?: string
   jsdelivr?: string
 }
@@ -64,7 +62,7 @@ export type LinkAttrobites = Partial<
 >
 
 export interface Serialization {
-  url?: string
+  url?: string[]
   type?: string
   name: string
   tag: 'link' | 'script'

@@ -63,7 +63,10 @@ async function tryRequireIIFEModule(module: TrackModule, vm: ReturnType<typeof c
   if (!iifeRelativePath) return
   const iifeFilePath = lookup(packageJsonPath, iifeRelativePath)
   const code = await fsp.readFile(iifeFilePath, 'utf8')
-  vm.run(code, { version, name, unpkg, jsdelivr, ...rest })
+  vm.run(code, { version, name, unpkg, jsdelivr, ...rest }, (info) => {
+    if (!info.unpkg && !info.jsdelivr) return null
+    return info
+  })
 }
 
 function startSyncThreads() {
@@ -107,14 +110,17 @@ class Scanner {
   }
   private serialization(modules: Array<TrackModule | string>) {
     is(!Array.isArray(modules), 'vite-plugin-cdn2: option module must be array')
-    return uniq(modules).map((module) => {
-      if (typeof module === 'string') return { name: module }
-      return module
-    })
+    return uniq(modules)
+      .map((module) => {
+        if (typeof module === 'string') return { name: module }
+        return module
+      })
+      .filter((v) => v.name)
   }
-
-  get moduleNames() {
-    return Object.keys(this.dependencies)
+  // ensure the order
+  get dependModuleNames() {
+    const deps = Object.keys(this.dependencies)
+    return this.modules.map((v) => v.name).filter((v) => deps.includes(v))
   }
   // TODO
   // Record can't be resolved module.
