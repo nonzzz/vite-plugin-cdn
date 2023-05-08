@@ -36,6 +36,7 @@ class InjectScript {
         }
       }
     }
+    console.log(this.modules)
     //issue #6
     // const element = document.body.querySelector('title')
     // element.insertAdjacentElement('beforebegin', '')

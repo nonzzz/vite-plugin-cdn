@@ -6,14 +6,14 @@ export function createVM() {
   const context = Object.create(null)
   const bindings: Record<string, IIFEModuleInfo> = {}
   vm.createContext(context)
-  const run = (code: string, opt: IIFEModuleInfo, invork: (info: IIFEModuleInfo) => IIFEModuleInfo | null) => {
+  const run = (code: string, opt: IIFEModuleInfo, invoke: (info: IIFEModuleInfo) => IIFEModuleInfo | null) => {
     try {
       vm.runInContext(code, context)
     } catch (_) {}
     const globalName = Object.keys(context).pop()
     if (!globalName) return
     if (!bindings[opt.name]) {
-      const re = invork({ ...opt, global: globalName })
+      const re = invoke({ ...opt, global: globalName })
       if (!re) return
       bindings[opt.name] = re
     }

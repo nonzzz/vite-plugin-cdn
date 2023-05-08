@@ -1,3 +1,5 @@
+import type { FilterPattern } from '@rollup/pluginutils'
+
 export interface TrackModule {
   name: string
   global?: string
@@ -28,12 +30,13 @@ export interface InjectVisitor {
 }
 
 export interface CDNPluginOptions {
-  isProduction?: boolean
   modules?: Array<TrackModule | string>
   preset?: PresetDomain
   logInfo?: 'silent' | 'info'
   mode?: PresetDomain
   transform?: () => InjectVisitor
+  include?: FilterPattern
+  exclude?: FilterPattern
 }
 
 export type ScriptAttributes = Partial<

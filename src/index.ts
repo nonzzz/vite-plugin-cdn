@@ -1,28 +1,30 @@
+import { createFilter } from '@rollup/pluginutils'
 import { createScanner } from './scanner'
 import { createInjectScript } from './inject'
+import { createTransform } from './ast'
 import { isSupportThreads } from './shared'
 import type { Plugin, ResolvedBuildOptions } from 'vite'
 import type { CDNPluginOptions } from './interface'
 
 function cdn(opts: CDNPluginOptions = {}): Plugin {
-  const { modules = [], mode = 'auto' } = opts
+  const { modules = [], mode = 'auto', include = /\.[jt]s$/, exclude } = opts
+  const filter = createFilter(include, exclude)
   const scanner = createScanner(modules)
+  const transform = createTransform()
   return {
     name: 'vite-plugin-cdn',
     enforce: 'post',
     apply: 'build',
-    async buildStart() {
+    async configResolved(config) {
+      const [isSupport, version] = isSupportThreads()
       try {
-        const [isSupport, version] = isSupportThreads()
         if (!isSupport) throw new Error(`vite-plugin-cdn2 can't work with nodejs ${version}.`)
         await scanner.scanAllDependencies()
-      } catch (err) {
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
-        this.error(err)
+        transform.injectDependencies(scanner.dependencies)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } catch (error: any) {
+        config.logger.error(error)
       }
-    },
-    configResolved(config) {
       // When we extra module we should set it as external
       if (!config.build.rollupOptions) {
         config.build.rollupOptions = {}
@@ -32,7 +34,7 @@ function cdn(opts: CDNPluginOptions = {}): Plugin {
       }
       const { external } = config.build.rollupOptions as Required<ResolvedBuildOptions['rollupOptions']>
       if (typeof external === 'function') {
-        config.logger.warnOnce(`'rollupOptions.external' is a function. It's may casue not work as expected.`)
+        config.logger.warnOnce(`'rollupOptions.external' is a function. It's may cause not work as expected.`)
         config.build.rollupOptions.external = [...scanner.dependModuleNames]
         return
       }
@@ -43,12 +45,13 @@ function cdn(opts: CDNPluginOptions = {}): Plugin {
       config.build.rollupOptions.external = [...scanner.dependModuleNames, external]
     },
     async transform(code, id) {
-      //
-    },
-    transformIndexHtml(html) {
-      const inject = createInjectScript(scanner.dependencies, scanner.dependModuleNames, mode)
-      return inject.inject(html, opts.transform)
+      if (!filter(id)) return
+      if (!transform.filter(code)) return
     }
+    // transformIndexHtml(html) {
+    //   const inject = createInjectScript(scanner.dependencies, scanner.dependModuleNames, mode)
+    //   return inject.inject(html, opts.transform)
+    // }
   }
 }
 

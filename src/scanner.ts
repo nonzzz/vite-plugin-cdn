@@ -9,7 +9,6 @@ interface WorkerData {
   scannerModule: TrackModule[]
   workerPort: MessagePort
   internalThread: boolean
-  sharedBuffer: SharedArrayBuffer
 }
 
 function createWorkerThreads(scannerModule: TrackModule[]) {
@@ -20,23 +19,19 @@ function createWorkerThreads(scannerModule: TrackModule[]) {
     transferList: [workerPort],
     execArgv: []
   })
-
   // record thread id
   const id = 0
-
-  const runSync = () => {
-    const sharedBuffer = new SharedArrayBuffer(8)
-    const sharedBufferView = new Int32Array(sharedBuffer)
-    worker.postMessage({ id, sharedBuffer })
-    const status = Atomics.wait(sharedBufferView, 0, 0)
-    if (status !== 'ok' && status !== 'not-equal') throw new Error('Internal error: Atomics.wait() failed: ' + status)
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const { message } = worker_threads.receiveMessageOnPort(mainPort)!
-    if (message.id !== id) throw new Error(`Internal error: Expected id ${id} but got id ${message.id}`)
-    return message.resolved
+  const run = () => {
+    worker.postMessage({ id })
+    return new Promise((resolve, reject) => {
+      mainPort.on('message', (message) => {
+        if (message.id !== id) reject(new Error(`Internal error: Expected id ${id} but got id ${message.id}`))
+        resolve(message.resolved)
+        worker.terminate()
+      })
+    })
   }
-  worker.unref()
-  return runSync()
+  return run()
 }
 
 async function tryRequireIIFEModule(module: TrackModule, vm: ReturnType<typeof createVM>) {
@@ -76,8 +71,7 @@ function startSyncThreads() {
   const vm = createVM()
   parentPort?.on('message', (msg) => {
     ;(async () => {
-      const { id, sharedBuffer } = msg
-      const sharedBufferView = new Int32Array(sharedBuffer)
+      const { id } = msg
       try {
         const queue = createConcurrentQueue(MAX_CONCURRENT)
         for (const module of scannerModule) {
@@ -88,8 +82,6 @@ function startSyncThreads() {
       } catch (error) {
         //
       }
-      Atomics.add(sharedBufferView, 0, 1)
-      Atomics.notify(sharedBufferView, 0, Infinity)
     })()
   })
 }
@@ -105,11 +97,11 @@ class Scanner {
     this.modules = this.serialization(modules)
     this.dependencies = {}
   }
-  public scanAllDependencies() {
-    this.dependencies = createWorkerThreads(this.modules)
+  public async scanAllDependencies() {
+    this.dependencies = (await createWorkerThreads(this.modules)) as Record<string, IIFEModuleInfo>
   }
   private serialization(modules: Array<TrackModule | string>) {
-    is(!Array.isArray(modules), 'vite-plugin-cdn2: option module must be array')
+    is(Array.isArray(modules), 'vite-plugin-cdn2: option module must be array')
     return uniq(modules)
       .map((module) => {
         if (typeof module === 'string') return { name: module }
