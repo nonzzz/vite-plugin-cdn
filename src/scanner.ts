@@ -64,7 +64,7 @@ async function tryRequireIIFEModule(module: TrackModule, vm: ReturnType<typeof c
   })
 }
 
-function startSyncThreads() {
+function startAsyncThreads() {
   if (!worker_threads.workerData.internalThread) return
   const { workerPort, scannerModule } = worker_threads.workerData as WorkerData
   const { parentPort } = worker_threads
@@ -72,6 +72,11 @@ function startSyncThreads() {
   parentPort?.on('message', (msg) => {
     ;(async () => {
       const { id } = msg
+      // We must ensure the order. If won't. The dependencies module Graph will be null
+      // CASE 'vue'->'varlet'
+      // If first resolve `varlet` the vm can't get the global. So
+      // the module Graph will be null(But it will re scanner at the transform stage)
+      // If we ensure the order. The performance of the whole program will be better :)
       try {
         const queue = createConcurrentQueue(MAX_CONCURRENT)
         for (const module of scannerModule) {
@@ -87,7 +92,7 @@ function startSyncThreads() {
 }
 
 if (worker_threads.workerData?.internalThread) {
-  startSyncThreads()
+  startAsyncThreads()
 }
 
 class Scanner {

@@ -59,4 +59,4 @@ function cdn(opts: CDNPluginOptions = {}): Plugin {
 export { cdn, createScanner }
 export default cdn
 
-export type { InjectVisitor, PresetDomain, TrackModule } from './interface'
+export type { InjectVisitor, PresetDomain, TrackModule, CDNPluginOptions } from './interface'
