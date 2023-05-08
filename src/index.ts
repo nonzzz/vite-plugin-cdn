@@ -3,7 +3,7 @@ import { createScanner } from './scanner'
 import { createInjectScript } from './inject'
 import { createTransform } from './ast'
 import { isSupportThreads } from './shared'
-import type { Plugin, ResolvedBuildOptions } from 'vite'
+import type { Plugin, ResolvedBuildOptions, TransformPluginContext } from 'vite'
 import type { CDNPluginOptions } from './interface'
 
 function cdn(opts: CDNPluginOptions = {}): Plugin {
@@ -46,12 +46,13 @@ function cdn(opts: CDNPluginOptions = {}): Plugin {
     },
     async transform(code, id) {
       if (!filter(id)) return
-      if (!transform.filter(code)) return
+      if (!transform.filter(code, id)) return
+      return transform.replace(code, this as unknown as TransformPluginContext)
+    },
+    transformIndexHtml(html) {
+      const inject = createInjectScript(scanner.dependencies, scanner.dependModuleNames, mode)
+      return inject.inject(html, opts.transform)
     }
-    // transformIndexHtml(html) {
-    //   const inject = createInjectScript(scanner.dependencies, scanner.dependModuleNames, mode)
-    //   return inject.inject(html, opts.transform)
-    // }
   }
 }
 

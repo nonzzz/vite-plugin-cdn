@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "allowJs": true,
-    "target": "ES2017",
+    "target": "ES2019",
     "outDir": "./dist",
     "baseUrl": ".",
     "strict": true,
@@ -11,5 +11,5 @@
     "esModuleInterop": true,
     "module": "CommonJS"
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "global.d.ts"]
 }
