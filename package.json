@@ -7,9 +7,10 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "bump",
-    "test": "ava",
+    "test": "ava __tests__/scanner.spec.ts",
     "dev": "bump -w",
-    "coverage": "c8 -r=lcov ava"
+    "coverage": "c8 -r=lcov ava",
+    "prepare:e2e":"cd e2e && npm run installer"
   },
   "keywords": [
     "vite",
