@@ -7,10 +7,10 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "bump",
-    "test": "ava __tests__/scanner.spec.ts",
+    "test": "ava __tests__/plugin.spec.ts",
     "dev": "bump -w",
     "coverage": "c8 -r=lcov ava",
-    "prepare:e2e":"cd e2e && npm run installer"
+    "prepare:e2e": "cd e2e && npm run installer"
   },
   "keywords": [
     "vite",
@@ -51,6 +51,7 @@
   },
   "dependencies": {
     "@rollup/pluginutils": "^5.0.2",
+    "estree-walker": "^3.0.3",
     "happy-dom": "^6.0.4",
     "magic-string": "^0.26.4",
     "rs-module-lexer": "^1.0.0"
