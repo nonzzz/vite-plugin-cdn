@@ -1,15 +1,15 @@
 {
   "compilerOptions": {
     "allowJs": true,
-    "target": "ES2019",
-    "outDir": "./dist",
     "baseUrl": ".",
-    "strict": true,
-    "noImplicitAny": true,
-    "moduleResolution": "Node",
-    "importHelpers": true,
+    "noImplicitThis": true,
     "esModuleInterop": true,
-    "module": "CommonJS"
-  },
-  "include": ["src/**/*", "global.d.ts"]
+    "skipLibCheck": true,
+    "target": "ES2019",
+    "lib": ["esnext", "dom"],
+    "resolveJsonModule": true,
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "outDir": "dist"
+  }
 }
