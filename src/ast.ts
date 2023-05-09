@@ -20,33 +20,31 @@ function scanForImportsAndExports(node: Node, magicStr: MagicString, deps: Recor
   for (const n of node.body) {
     switch (n.type) {
       case 'ImportDeclaration':
-      case 'ExportAllDeclaration':
-      case 'ExportNamedDeclaration':
         const ref = n.source.value as string
         if (ref in deps) {
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-          // @ts-ignore
-          magicStr.remove(n.start, n.end)
           const globalName = deps[ref].global
-          // only process ImportDeclaration
-          if (n.type === IMPORT_DECLARATION) {
-            for (const specifier of n.specifiers) {
-              // import module from 'module'
-              // import * as module from 'module'
-              if (specifier.type === 'ImportDefaultSpecifier' || specifier.type === 'ImportNamespaceSpecifier') {
-                bindings.set(specifier.local.name, {
-                  alias: globalName
-                })
-              }
-              // import { a1, b2 } from 'module'
-              if (specifier.type === 'ImportSpecifier') {
-                bindings.set(specifier.imported.name, {
-                  alias: `${globalName}.${specifier.imported.name}`
-                })
-              }
+          // only process ImportDeclaration & ExportNamedDeclaration
+          for (const specifier of n.specifiers) {
+            // import module from 'module-name'
+            // import * as module from 'module-name'
+            if (specifier.type === 'ImportDefaultSpecifier' || specifier.type === 'ImportNamespaceSpecifier') {
+              bindings.set(specifier.local.name, {
+                alias: globalName
+              })
+            }
+            // import { a1, b2 } from 'module'
+            if (specifier.type === 'ImportSpecifier') {
+              bindings.set(specifier.imported.name, {
+                alias: `${globalName}.${specifier.imported.name}`
+              })
             }
           }
         }
+        // case 'ExportAllDeclaration':
+        // case 'ExportNamedDeclaration':
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        magicStr.remove(n.start, n.end)
     }
   }
   return bindings
@@ -120,6 +118,50 @@ function overWriteExportAllDeclaration(
   }
 }
 
+// export { default as A } from 'module-name'
+// export { B as default } from 'module-name'
+function overWriteExportNamedDeclaration(node: Node, magicStr: MagicString, deps: Record<string, IIFEModuleInfo>) {
+  if (node.type === 'ExportNamedDeclaration') {
+    const ref = node.source.value as string
+    const bindings: Record<string, string> = {}
+    if (ref in deps) {
+      const { global: globalName } = deps[ref]
+      for (const specifier of node.specifiers) {
+        if (specifier.local.name) {
+          if (specifier.local.name === 'default') {
+            bindings['__inject__export__default__'] = globalName
+          } else {
+            if (specifier.exported.name === 'default') {
+              bindings['__inject__export__default__'] = `${globalName}.${specifier.local.name}`
+            } else {
+              bindings[specifier.local.name] = `${globalName}.${specifier.local.name}`
+            }
+          }
+        }
+      }
+    }
+    const writeContent = []
+    for (const binding in bindings) {
+      const value = bindings[binding]
+      if (binding === '__inject__export__default__') {
+        writeContent.push(`const ${binding} = ${value} `, `export default ${binding};`)
+        continue
+      }
+      writeContent.push(`export const ${binding} = ${value};`)
+    }
+    magicStr.overwrite(
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      node.start,
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      node.end,
+      writeContent.join('\n'),
+      { contentOnly: true }
+    )
+  }
+}
+
 // Why not using rollup-plugin-external-globals
 // It can't resolve many edge case for application.
 
@@ -173,8 +215,15 @@ export class Parse {
           return
         }
         if (node.type === EXPORT_ALL_DECLARATION) {
-          console.log(node)
+          this.skip()
           overWriteExportAllDeclaration(node, magicStr, parseContext.dependenciesGraph, parseContext.dependencies)
+          return
+        }
+        if (node.type === EXPORT_NAMED_DECLARATION) {
+          this.skip()
+          overWriteExportNamedDeclaration(node, magicStr, parseContext.dependencies)
+          // overWriteExportAllDeclaration(node, magicStr, parseContext.dependenciesGraph, parseContext.dependencies)
+          return
         }
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore

@@ -24,18 +24,16 @@ export async function mockBuild(dir: string, pluginOptions: CDNPluginOptions = {
   return id
 }
 
-// test.after(async () => {
-//   await fsp.rm(dist, { recursive: true })
-// })
+test.after(async () => {
+  await fsp.rm(dist, { recursive: true })
+})
 
 test('plugin importer case', async (t) => {
-  const id = await mockBuild('importer', { modules: ['prettier'] })
-  console.log(id)
+  await mockBuild('importer', { modules: ['prettier'] })
   t.pass()
 })
 
-// test('plugin exporter case', async (t) => {
-//   const id = await mockBuild('exporter', { modules: ['prettier'] })
-//   console.log(id)
-//   t.pass()
-// })
+test('plugin exporter case', async (t) => {
+  await mockBuild('exporter', { modules: ['prettier'] })
+  t.pass()
+})
