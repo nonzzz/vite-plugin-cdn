@@ -3,13 +3,18 @@ import MagicString from 'magic-string'
 import { attachScopes } from '@rollup/pluginutils'
 import { parse as esModuleLexer } from 'rs-module-lexer'
 import { len } from './shared'
-import type { Node } from 'estree'
+import type { AttachedScope } from '@rollup/pluginutils'
+import type { Node as EsNode, ExportNamedDeclaration, ExportAllDeclaration } from 'estree'
 import type { TransformPluginContext } from 'vite'
-import { IIFEModuleInfo } from './interface'
+import type { IIFEModuleInfo } from './interface'
 
 const IMPORT_DECLARATION = 'ImportDeclaration'
 const EXPORT_NAMED_DECLARATION = 'ExportNamedDeclaration'
 const EXPORT_ALL_DECLARATION = 'ExportAllDeclaration'
+
+type Node = EsNode & {
+  scope?: AttachedScope
+}
 
 // es-walker is implement from https://github.com/Rich-Harris/estree-walker
 // MIT LICENSE
@@ -210,8 +215,6 @@ function scanForImportsAndExports(node: Node, magicStr: MagicString, deps: Recor
       case 'ImportDeclaration':
         const ref = n.source.value as string
         if (ref in deps) {
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-          // @ts-ignore
           magicStr.remove(n.start, n.end)
           const globalName = deps[ref].global
           // only process ImportDeclaration & ExportNamedDeclaration
@@ -240,86 +243,66 @@ function scanForImportsAndExports(node: Node, magicStr: MagicString, deps: Recor
 
 function overWriteIdentifier(node: Node, magicStr: MagicString, alias: string) {
   if (node.type === 'Identifier') {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
     magicStr.overwrite(node.start, node.end, alias, { contentOnly: true })
   }
 }
 
 function overWriteExportAllDeclaration(
-  node: Node,
+  node: ExportAllDeclaration,
   magicStr: MagicString,
   depsGraph: Record<string, string[]>,
   deps: Record<string, IIFEModuleInfo>
 ) {
-  if (node.type === 'ExportAllDeclaration') {
-    const ref = node.source.value as string
-    if (ref in depsGraph) {
-      const dependencies = depsGraph[ref]
-      const { global: globalName } = deps[ref]
-      // TODO
-      // I can't find a good way to solve the duplicate name problem.
-      const writeContent = node.exported
-        ? `export const ${node.exported.name} = window.${globalName};`
-        : dependencies.map((dep) => `export const ${dep}= ${globalName}.${dep};`).join('\n')
-      magicStr.overwrite(
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
-        node.start,
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
-        node.end,
-        writeContent,
-        { contentOnly: true }
-      )
-    }
+  const ref = node.source.value as string
+  if (ref in depsGraph) {
+    const dependencies = depsGraph[ref]
+    const { global: globalName } = deps[ref]
+    // TODO
+    // I can't find a good way to solve the duplicate name problem.
+    const writeContent = node.exported
+      ? `export const ${node.exported.name} = window.${globalName};`
+      : dependencies.map((dep) => `export const ${dep}= ${globalName}.${dep};`).join('\n')
+    magicStr.overwrite(node.start, node.end, writeContent, { contentOnly: true })
   }
 }
 
 // export { default as A } from 'module-name'
 // export { B as default } from 'module-name'
-// export module = expr
-function overWriteExportNamedDeclaration(node: Node, magicStr: MagicString, deps: Record<string, IIFEModuleInfo>) {
-  if (node.type === 'ExportNamedDeclaration') {
-    if (!node.source) return
-    const ref = node.source.value as string
-    const bindings: Record<string, string> = {}
-    if (ref in deps) {
-      const { global: globalName } = deps[ref]
-      for (const specifier of node.specifiers) {
-        if (specifier.local.name) {
-          if (specifier.local.name === 'default') {
-            bindings['__inject__export__default__'] = globalName
+function overWriteExportNamedDeclaration(
+  node: ExportNamedDeclaration,
+  magicStr: MagicString,
+  deps: Record<string, IIFEModuleInfo>
+) {
+  // Skip expression
+  if (!node.source) return
+  const ref = node.source.value as string
+  const bindings: Record<string, string> = {}
+  if (ref in deps) {
+    const { global: globalName } = deps[ref]
+    for (const specifier of node.specifiers) {
+      if (specifier.local.name) {
+        if (specifier.local.name === 'default') {
+          bindings['__inject__export__default__'] = globalName
+        } else {
+          if (specifier.exported.name === 'default') {
+            bindings['__inject__export__default__'] = `${globalName}.${specifier.local.name}`
           } else {
-            if (specifier.exported.name === 'default') {
-              bindings['__inject__export__default__'] = `${globalName}.${specifier.local.name}`
-            } else {
-              bindings[specifier.local.name] = `${globalName}.${specifier.local.name}`
-            }
+            bindings[specifier.local.name] = `${globalName}.${specifier.local.name}`
           }
         }
       }
     }
-    const writeContent = []
-    for (const binding in bindings) {
-      const value = bindings[binding]
-      if (binding === '__inject__export__default__') {
-        writeContent.push(`const ${binding} = ${value} `, `export default ${binding};`)
-        continue
-      }
-      writeContent.push(`export const ${binding} = ${value};`)
-    }
-    magicStr.overwrite(
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      node.start,
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      node.end,
-      writeContent.join('\n'),
-      { contentOnly: true }
-    )
   }
+  const writeContent = []
+  for (const binding in bindings) {
+    const value = bindings[binding]
+    if (binding === '__inject__export__default__') {
+      writeContent.push(`const ${binding} = ${value} `, `export default ${binding};`)
+      continue
+    }
+    writeContent.push(`export const ${binding} = ${value};`)
+  }
+  magicStr.overwrite(node.start, node.end, writeContent.join('\n'), { contentOnly: true })
 }
 
 // Why not using rollup-plugin-external-globals
@@ -330,14 +313,12 @@ function overWriteExportNamedDeclaration(node: Node, magicStr: MagicString, deps
 export class Parse {
   private dependencies: Record<string, IIFEModuleInfo>
   private dependenciesGraph: Record<string, string[]>
-  private walker: typeof walk
   constructor() {
     this.dependencies = {}
   }
   injectDependencies(dependenciesGraph: Record<string, string[]>, dependencies: Record<string, IIFEModuleInfo>) {
     this.dependencies = dependencies
     this.dependenciesGraph = dependenciesGraph
-    this.walker = walk
   }
   filter(code: string, id: string) {
     const { output } = esModuleLexer({
@@ -367,7 +348,7 @@ export class Parse {
     // We get all dependencies grpah in scanner stage.
     // According dependencies graph we can infer the referernce.
     const parseContext = this
-    this.walker(ast as Node, {
+    walk(ast as Node, {
       enter(node, parent) {
         if (node.type === IMPORT_DECLARATION) {
           this.skip()
@@ -381,11 +362,7 @@ export class Parse {
           this.skip()
           overWriteExportNamedDeclaration(node, magicStr, parseContext.dependencies)
         }
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
         if (node.scope) {
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-          // @ts-ignore
           // eslint-disable-next-line prefer-destructuring
           scope = node.scope
         }
@@ -401,12 +378,7 @@ export class Parse {
         }
       },
       leave(node) {
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
         if (node.scope) {
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-          // @ts-ignore
-          // eslint-disable-next-line prefer-destructuring
           scope = node.scope.parent
         }
       }
