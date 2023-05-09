@@ -5,20 +5,114 @@ import { parse as esModuleLexer } from 'rs-module-lexer'
 import { len } from './shared'
 import type { Node } from 'estree-walker'
 import type { TransformPluginContext } from 'vite'
-import type { AcornNode } from './interface'
+import { IIFEModuleInfo } from './interface'
 
 const IMPORT_DECLARATION = 'ImportDeclaration'
 const EXPORT_NAMED_DECLARATION = 'ExportNamedDeclaration'
 const EXPORT_ALL_DECLARATION = 'ExportAllDeclaration'
 
-type AnalyzeType = typeof IMPORT_DECLARATION | typeof EXPORT_ALL_DECLARATION | typeof EXPORT_NAMED_DECLARATION
+// overwrite source code imports and exports
+// record bindings in current code
 
-function scanForImportsAndExports(node: AcornNode & { type: AnalyzeType }, magicStr: MagicString) {
-  switch (node.type) {
-    case 'ImportDeclaration':
-    case 'ExportAllDeclaration':
-    case 'ExportNamedDeclaration':
-      magicStr.remove(node.start, node.end)
+function scanForImportsAndExports(node: Node, magicStr: MagicString, deps: Record<string, IIFEModuleInfo>) {
+  const bindings: Map<string, { alias: string }> = new Map()
+  if (node.type !== 'Program') return bindings
+  for (const n of node.body) {
+    switch (n.type) {
+      case 'ImportDeclaration':
+      case 'ExportAllDeclaration':
+      case 'ExportNamedDeclaration':
+        const ref = n.source.value as string
+        if (ref in deps) {
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore
+          magicStr.remove(n.start, n.end)
+          const globalName = deps[ref].global
+          // only process ImportDeclaration
+          if (n.type === IMPORT_DECLARATION) {
+            for (const specifier of n.specifiers) {
+              // import module from 'module'
+              // import * as module from 'module'
+              if (specifier.type === 'ImportDefaultSpecifier' || specifier.type === 'ImportNamespaceSpecifier') {
+                bindings.set(specifier.local.name, {
+                  alias: globalName
+                })
+              }
+              // import { a1, b2 } from 'module'
+              if (specifier.type === 'ImportSpecifier') {
+                bindings.set(specifier.imported.name, {
+                  alias: `${globalName}.${specifier.imported.name}`
+                })
+              }
+            }
+          }
+        }
+    }
+  }
+  return bindings
+}
+
+// isRefernce is implement from  https://github.com/Rich-Harris/is-reference
+// MIT LICENSE
+function isReference(node: Node, parent: Node) {
+  if (node.type === 'MemberExpression') {
+    return !node.computed && isReference(node.object, node)
+  }
+  if (node.type === 'Identifier') {
+    if (!parent) return true
+    switch (parent.type) {
+      case 'MemberExpression':
+        return parent.computed || node === parent.object
+      case 'MethodDefinition':
+        return parent.computed
+      case 'PropertyDefinition':
+        return parent.computed || node === parent.value
+      case 'Property':
+        return parent.computed || node === parent.value
+      case 'ExportSpecifier':
+      case 'ImportSpecifier':
+        return node === parent.local
+      case 'LabeledStatement':
+      case 'BreakStatement':
+      case 'ContinueStatement':
+        return false
+      default:
+        return true
+    }
+  }
+}
+
+function overWriteIdentifier(node: Node, magicStr: MagicString, alias: string) {
+  if (node.type === 'Identifier') {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    magicStr.overwrite(node.start, node.end, alias, { contentOnly: true })
+  }
+}
+
+function overWriteExportAllDeclaration(
+  node: Node,
+  magicStr: MagicString,
+  depsGraph: Record<string, string[]>,
+  deps: Record<string, IIFEModuleInfo>
+) {
+  if (node.type === 'ExportAllDeclaration') {
+    const ref = node.source.value as string
+    if (ref in depsGraph) {
+      const dependencies = depsGraph[ref]
+      const { global: galobalName } = deps[ref]
+
+      magicStr.overwrite(
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        node.start,
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        node.end,
+        dependencies.map((dep) => `export const ${dep} = ${galobalName}.${dep};`).join('\n'),
+        { contentOnly: true }
+      )
+    }
   }
 }
 
@@ -27,15 +121,16 @@ function scanForImportsAndExports(node: AcornNode & { type: AnalyzeType }, magic
 
 // rs-module-lexer only prcoess js file.
 
-// Transform is a collection of static methods
-export class Transform {
-  private dependencies: Record<string, string[]>
+export class Parse {
+  private dependencies: Record<string, IIFEModuleInfo>
+  private dependenciesGraph: Record<string, string[]>
   private walker: typeof import('estree-walker').walk
   constructor() {
     this.dependencies = {}
   }
-  async injectDependencies(dependencies: Record<string, string[]>) {
+  async injectDependencies(dependenciesGraph: Record<string, string[]>, dependencies: Record<string, IIFEModuleInfo>) {
     this.dependencies = dependencies
+    this.dependenciesGraph = dependenciesGraph
     const { walk } = await import('estree-walker')
     this.walker = walk
   }
@@ -59,24 +154,41 @@ export class Transform {
     }
     return false
   }
-  replace(code: string, rollupTransformPluginContext: TransformPluginContext) {
-    const ast = rollupTransformPluginContext.parse(code) as AcornNode
+  overWrite(code: string, rollupTransformPluginContext: TransformPluginContext) {
+    const ast = rollupTransformPluginContext.parse(code) as Node
     const scoped = attachScopes(ast, 'scope')
     const magicStr = new MagicString(code)
-    const document = ast.body as AcornNode[]
-    for (const node of document) {
-      scanForImportsAndExports(node as AcornNode & { type: AnalyzeType }, magicStr)
-    }
-    // we get all dependencies grpah in scanner stage.
+    const bindings = scanForImportsAndExports(ast, magicStr, this.dependencies)
+    // We get all dependencies grpah in scanner stage.
+    // According dependencies graph we can infer the referernce.
+    const parseContext = this
     this.walker(ast as Node, {
-      enter(node) {
-        console.log(node)
+      enter(node, parent) {
+        if (node.type === IMPORT_DECLARATION) {
+          this.skip()
+          return
+        }
+        if (node.type === EXPORT_ALL_DECLARATION) {
+          this.skip()
+          overWriteExportAllDeclaration(node, magicStr, parseContext.dependenciesGraph, parseContext.dependencies)
+          return
+        }
+        if (node.type !== 'Program') {
+          if (isReference(node, parent)) {
+            switch (node.type) {
+              case 'Identifier':
+                if (bindings.has(node.name)) {
+                  overWriteIdentifier(node, magicStr, bindings.get(node.name).alias)
+                }
+            }
+          }
+        }
       }
     })
     return { code: magicStr.toString(), map: magicStr.generateMap() }
   }
 }
 
-export function createTransform() {
-  return new Transform()
+export function createParse() {
+  return new Parse()
 }

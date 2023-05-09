@@ -90,7 +90,7 @@ async function tryResolveModule(
     keys.splice(pos, 1)
     keys.push(...Object.keys(pkg.default))
   }
-  dependenciesGraph[name] = keys.sort()
+  dependenciesGraph[name] = uniq(keys.sort())
 }
 
 function startAsyncThreads() {

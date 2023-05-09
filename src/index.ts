@@ -1,16 +1,16 @@
 import { createFilter } from '@rollup/pluginutils'
 import { createScanner } from './scanner'
 import { createInjectScript } from './inject'
-import { createTransform } from './ast'
+import { createParse } from './ast'
 import { isSupportThreads } from './shared'
 import type { Plugin, ResolvedBuildOptions, TransformPluginContext } from 'vite'
 import type { CDNPluginOptions } from './interface'
 
 function cdn(opts: CDNPluginOptions = {}): Plugin {
-  const { modules = [], mode = 'auto', include = /\.[jt]s$/, exclude } = opts
+  const { modules = [], mode = 'auto', include = /\.(mjs|js|ts|vue|jsx|tsx)(\?.*|)$/, exclude } = opts
   const filter = createFilter(include, exclude)
   const scanner = createScanner(modules)
-  const transform = createTransform()
+  const parse = createParse()
   return {
     name: 'vite-plugin-cdn',
     enforce: 'post',
@@ -20,7 +20,7 @@ function cdn(opts: CDNPluginOptions = {}): Plugin {
       try {
         if (!isSupport) throw new Error(`vite-plugin-cdn2 can't work with nodejs ${version}.`)
         await scanner.scanAllDependencies()
-        await transform.injectDependencies(scanner.dependenciesGraph)
+        await parse.injectDependencies(scanner.dependenciesGraph, scanner.dependencies)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
         config.logger.error(error)
@@ -46,8 +46,8 @@ function cdn(opts: CDNPluginOptions = {}): Plugin {
     },
     async transform(code, id) {
       if (!filter(id)) return
-      if (!transform.filter(code, id)) return
-      return transform.replace(code, this as unknown as TransformPluginContext)
+      if (!parse.filter(code, id)) return
+      return parse.overWrite(code, this as unknown as TransformPluginContext)
     },
     transformIndexHtml(html) {
       const inject = createInjectScript(scanner.dependencies, scanner.dependModuleNames, mode)

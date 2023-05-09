@@ -4,6 +4,7 @@ module.exports = {
   extends: ['plugin:@typescript-eslint/recommended', 'kagura', 'prettier'],
   ignorePatterns: ['dist/**/*'],
   rules: {
-    '@typescript-eslint/no-var-requires': 0
+    '@typescript-eslint/no-var-requires': 0,
+    '@typescript-eslint/no-this-alias': 0
   }
 }

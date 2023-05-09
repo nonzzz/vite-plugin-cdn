@@ -71,13 +71,6 @@ export interface Serialization {
   tag: 'link' | 'script'
 }
 
-export interface AcornNode {
-  end: number
-  start: number
-  type: string
-  [prop: string]: unknown
-}
-
 export interface InternalError {
   code: string
   message: string
