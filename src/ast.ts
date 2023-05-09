@@ -100,8 +100,12 @@ function overWriteExportAllDeclaration(
     const ref = node.source.value as string
     if (ref in depsGraph) {
       const dependencies = depsGraph[ref]
-      const { global: galobalName } = deps[ref]
-
+      const { global: globalName } = deps[ref]
+      // TODO
+      // I can't find a good way to solve the duplicate name problem.
+      const writeContent = node.exported
+        ? `export const ${node.exported.name} = window.${globalName};`
+        : dependencies.map((dep) => `export const ${dep} = ${globalName}.${dep};`).join('\n')
       magicStr.overwrite(
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
@@ -109,7 +113,7 @@ function overWriteExportAllDeclaration(
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
         node.end,
-        dependencies.map((dep) => `export const ${dep} = ${galobalName}.${dep};`).join('\n'),
+        writeContent,
         { contentOnly: true }
       )
     }
@@ -156,7 +160,7 @@ export class Parse {
   }
   overWrite(code: string, rollupTransformPluginContext: TransformPluginContext) {
     const ast = rollupTransformPluginContext.parse(code) as Node
-    const scoped = attachScopes(ast, 'scope')
+    let scope = attachScopes(ast, 'scope')
     const magicStr = new MagicString(code)
     const bindings = scanForImportsAndExports(ast, magicStr, this.dependencies)
     // We get all dependencies grpah in scanner stage.
@@ -169,19 +173,36 @@ export class Parse {
           return
         }
         if (node.type === EXPORT_ALL_DECLARATION) {
-          this.skip()
+          console.log(node)
           overWriteExportAllDeclaration(node, magicStr, parseContext.dependenciesGraph, parseContext.dependencies)
-          return
+        }
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        if (node.scope) {
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore
+          // eslint-disable-next-line prefer-destructuring
+          scope = node.scope
         }
         if (node.type !== 'Program') {
           if (isReference(node, parent)) {
             switch (node.type) {
               case 'Identifier':
-                if (bindings.has(node.name)) {
+                if (bindings.has(node.name) && !scope.contains(node.name)) {
                   overWriteIdentifier(node, magicStr, bindings.get(node.name).alias)
                 }
             }
           }
+        }
+      },
+      leave(node) {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        if (node.scope) {
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore
+          // eslint-disable-next-line prefer-destructuring
+          scope = node.scope.parent
         }
       }
     })

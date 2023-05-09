@@ -14,7 +14,7 @@ export async function mockBuild(dir: string, pluginOptions: CDNPluginOptions = {
   await build({
     root: path.join(defaultWd, 'fixtures', dir),
     build: {
-      outDir: path.join(defaultWd, 'dist', id)
+      outDir: path.join(dist, id)
     },
     plugins: [cdn(pluginOptions)],
     configFile: false,
@@ -28,8 +28,14 @@ export async function mockBuild(dir: string, pluginOptions: CDNPluginOptions = {
 //   await fsp.rm(dist, { recursive: true })
 // })
 
-test('vite-plugin-cdn2', async (t) => {
-  const id = await mockBuild('dynamic', { modules: ['prettier'] })
+test('plugin importer case', async (t) => {
+  const id = await mockBuild('importer', { modules: ['prettier'] })
   console.log(id)
   t.pass()
 })
+
+// test('plugin exporter case', async (t) => {
+//   const id = await mockBuild('exporter', { modules: ['prettier'] })
+//   console.log(id)
+//   t.pass()
+// })
