@@ -32,7 +32,6 @@ export interface InjectVisitor {
 export interface CDNPluginOptions {
   modules?: Array<TrackModule | string>
   preset?: PresetDomain
-  logInfo?: 'silent' | 'info'
   mode?: PresetDomain
   transform?: () => InjectVisitor
   include?: FilterPattern

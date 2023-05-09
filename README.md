@@ -2,21 +2,12 @@
 
 A Vite plugin that allowed you replace module with CDN. This plugin is designed to replace
 `vite-plugin-cdn`,`vite-plugin-cdn-import`.
+Why choose `vite-plugin-cdn2`? Simple conf and usage. The most important thing is that can over
+many scenes.
 
 <p align="center">
 <img src="https://img.shields.io/codecov/c/github/nonzzz/vite-plugin-cdn?style=for-the-badge" alt="Coverage Status" />
-<img alt="GitHub Workflow Status" src="https://img.shields.io/github/workflow/status/nonzzz/vite-plugin-cdn/test?style=for-the-badge">
 </p>
-
-## Comparison
-
-|                                   | [nonzzz/vite-plugin-cdn](https://github.com/nonzzz/vite-plugin-cdn) | [MMF-FE/vite-plugin-cdn-import](https://github.com/MMF-FE/vite-plugin-cdn-import) | [crcong/vite-plugin-externals](https://github.com/crcong/vite-plugin-externals/tree/main/src) |
-| --------------------------------- | ------------------------------------------------------------------- | --------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| unit test case                    | Yes                                                                 | NO                                                                                | Yes                                                                                           |
-| Support more scenarios            | Yes                                                                 | No                                                                                | No                                                                                            |
-| Custom insert result              | Yes                                                                 | No                                                                                | Yes (But you need insert all source manally)                                                  |
-| Friendly error handing            | Yes                                                                 | No                                                                                | No                                                                                            |
-| Mounted wtih window(`window.xxx`) | No                                                                  | No                                                                                | Yes                                                                                           |
 
 ## Quick Start
 
@@ -44,15 +35,7 @@ import { cdn } from 'vite-plugin-cdn2'
 export default defineConfig({
   plugins: [
     //  ... your plugin
-    cdn({
-      isProduction: true,
-      modules: [
-        {
-          name: 'vue',
-          global: 'Vue'
-        }
-      ]
-    })
+    cdn({ modules: ['vue'] })
   ]
 })
 ```
@@ -63,60 +46,19 @@ export default defineConfig({
 export type PresetDomain = 'auto' | 'jsdelivr' | 'unpkg' | false
 
 export interface CDNPluginOptions {
-  isProduction?: boolean
-  modules?: Array<TrackModule>
+  modules?: Array<TrackModule | string>
   /**
-   * Preset auto will read the package.json has unpkg or jsdelivr path. If not willn't be
+   *auto will read the package.json has unpkg or jsdelivr path. If not willn't be
    * repalce. set false you can define spare for each module.
    */
-  preset?: PresetDomain
-  logInfo?: 'silent' | 'info'
+  mode?: PresetDomain
+  include?: FilterPattern
+  exclude?: FilterPattern
   /**
    * Transform can replace the capture result. and rewrite them.
    */
-  transform?: (meta: Transformed) => void | Transformed
+  transform?: () => InjectVisitor
 }
-```
-
-### Transform Demo
-
-```ts
-// vite.config.ts
-
-import { defineConfig } from 'vite'
-
-import { cdn } from 'vite-plugin-cdn2'
-
-export default defineConfig({
-  plugins: [
-    //  ... your plugin
-    cdn({
-      isProduction: true,
-      modules: [
-        {
-          name: 'vue',
-          global: 'Vue'
-        },
-        {
-          name: '@fect-ui/vue',
-          global: 'fect',
-          spare: [
-            'https://cdn.jsdelivr.net/npm/@fect-ui/vue@1.6.1/dist/cjs/fect.umd.js',
-            'https://cdn.jsdelivr.net/npm/@fect-ui/vue@1.6.1/dist/cjs/main.css'
-          ]
-        }
-      ],
-      preset: false,
-      transform(results) {
-        results.forEach((result) => {
-          if (result.tag === 'script') {
-            result.defer = true
-          }
-        })
-      }
-    })
-  ]
-})
 ```
 
 ### Acknowledgements
@@ -130,3 +72,7 @@ Thanks to [JetBrains](https://www.jetbrains.com/) for allocating free open-sourc
 ### LICENSE
 
 [MIT](./LICENSE)
+
+### Author
+
+Kanno
