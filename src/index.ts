@@ -20,7 +20,7 @@ function cdn(opts: CDNPluginOptions = {}): Plugin {
       try {
         if (!isSupport) throw new Error(`vite-plugin-cdn2 can't work with nodejs ${version}.`)
         await scanner.scanAllDependencies()
-        await parse.injectDependencies(scanner.dependenciesGraph, scanner.dependencies)
+        parse.injectDependencies(scanner.dependenciesGraph, scanner.dependencies)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
         config.logger.error(error)

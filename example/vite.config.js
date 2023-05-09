@@ -10,9 +10,9 @@ export default defineConfig({
     Components({ resolvers: [VarletUIResolver()] }),
     {
       ...cdn({
-        modules: ['vue', '@varlet/ui', 'vue-demi', 'pinia']
+        modules: ['vue', 'vue-demi', 'pinia', '@varlet/ui']
       }),
-      apply: 'serve'
+      apply: 'build'
     }
   ]
 })

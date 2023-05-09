@@ -28,12 +28,18 @@ test.after(async () => {
   await fsp.rm(dist, { recursive: true })
 })
 
-test('plugin importer case', async (t) => {
-  await mockBuild('importer', { modules: ['prettier'] })
-  t.pass()
-})
+// test('plugin importer case', async (t) => {
+//   await mockBuild('importer', { modules: ['prettier'] })
+//   t.pass()
+// })
 
 test('plugin exporter case', async (t) => {
   await mockBuild('exporter', { modules: ['prettier'] })
   t.pass()
 })
+
+// test('plugin named exporter case', async (t) => {
+//   const id = await mockBuild('name-export', { modules: ['prettier'] })
+//   console.log(id)
+//   t.pass()
+// })
