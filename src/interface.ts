@@ -70,8 +70,3 @@ export interface Serialization {
   name: string
   tag: 'link' | 'script'
 }
-
-export interface InternalError {
-  code: string
-  message: string
-}

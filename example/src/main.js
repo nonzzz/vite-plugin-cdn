@@ -1,6 +1,7 @@
 import { createApp } from 'vue'
-import Fect from '@fect-ui/vue'
-
+import { createPinia } from 'pinia'
 import App from './app.vue'
 
-createApp(App).use(Fect).mount('#app')
+const pinia = createPinia()
+
+createApp(App).use(pinia).mount('#app')

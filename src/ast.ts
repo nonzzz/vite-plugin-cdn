@@ -22,6 +22,11 @@ function scanForImportsAndExports(node: Node, magicStr: MagicString, deps: Recor
       case 'ImportDeclaration':
         const ref = n.source.value as string
         if (ref in deps) {
+          // case 'ExportAllDeclaration':
+          // case 'ExportNamedDeclaration':
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore
+          magicStr.remove(n.start, n.end)
           const globalName = deps[ref].global
           // only process ImportDeclaration & ExportNamedDeclaration
           for (const specifier of n.specifiers) {
@@ -32,19 +37,15 @@ function scanForImportsAndExports(node: Node, magicStr: MagicString, deps: Recor
                 alias: globalName
               })
             }
-            // import { a1, b2 } from 'module'
+            // import { a1, b2 } from 'module-name'
+            // import {s as S } from 'module-name'
             if (specifier.type === 'ImportSpecifier') {
-              bindings.set(specifier.imported.name, {
+              bindings.set(specifier.local.name, {
                 alias: `${globalName}.${specifier.imported.name}`
               })
             }
           }
         }
-        // case 'ExportAllDeclaration':
-        // case 'ExportNamedDeclaration':
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
-        magicStr.remove(n.start, n.end)
     }
   }
   return bindings

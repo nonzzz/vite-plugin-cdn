@@ -1,16 +1,19 @@
-import vm from 'vm'
+// import vm from 'vm'
 import os from 'os'
+import { Window } from 'happy-dom'
 import type { IIFEModuleInfo } from './interface'
 
 export function createVM() {
-  const context = Object.create(null)
+  // const context = Object.create(null)
   const bindings: Record<string, IIFEModuleInfo> = {}
-  vm.createContext(context)
+  // vm.createContext(context)
+  const window = new Window()
   const run = (code: string, opt: IIFEModuleInfo, invoke: (info: IIFEModuleInfo) => IIFEModuleInfo | null) => {
     try {
-      vm.runInContext(code, context)
+      window.eval(code)
+      // vm.runInContext(code, context)
     } catch (_) {}
-    const globalName = Object.keys(context).pop()
+    const globalName = Object.keys(window).pop()
     if (!globalName) return
     if (!bindings[opt.name]) {
       const re = invoke({ ...opt, global: globalName })

@@ -2,7 +2,7 @@
   "name": "vite-plugin-cdn2",
   "version": "0.3.3",
   "description": "A Vite plugin that allowed you replace module with CDN",
-  "main": "dist/index.cjs.js",
+  "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "scripts": {
