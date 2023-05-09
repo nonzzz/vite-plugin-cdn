@@ -207,7 +207,12 @@ function isReference(node: Node, parent: Node) {
 // overwrite source code imports and exports
 // record bindings in current code
 
-function scanForImportsAndExports(node: Node, magicStr: MagicString, deps: Record<string, IIFEModuleInfo>) {
+function scanForImportsAndExports(
+  node: Node,
+  magicStr: MagicString,
+  depsGraph: Record<string, string[]>,
+  deps: Record<string, IIFEModuleInfo>
+) {
   const bindings: Map<string, { alias: string }> = new Map()
   if (node.type !== 'Program') return bindings
   for (const n of node.body) {
@@ -217,7 +222,6 @@ function scanForImportsAndExports(node: Node, magicStr: MagicString, deps: Recor
         if (ref in deps) {
           magicStr.remove(n.start, n.end)
           const globalName = deps[ref].global
-          // only process ImportDeclaration & ExportNamedDeclaration
           for (const specifier of n.specifiers) {
             // import module from 'module-name'
             // import * as module from 'module-name'
@@ -235,6 +239,13 @@ function scanForImportsAndExports(node: Node, magicStr: MagicString, deps: Recor
             }
           }
         }
+        break
+      case 'ExportAllDeclaration':
+        overWriteExportAllDeclaration(n, magicStr, depsGraph, deps)
+        break
+      case 'ExportNamedDeclaration':
+        if (!n.source) break
+        overWriteExportNamedDeclaration(n, magicStr, deps)
     }
   }
 
@@ -273,8 +284,6 @@ function overWriteExportNamedDeclaration(
   magicStr: MagicString,
   deps: Record<string, IIFEModuleInfo>
 ) {
-  // Skip expression
-  if (!node.source) return
   const ref = node.source.value as string
   const bindings: Record<string, string> = {}
   if (ref in deps) {
@@ -344,23 +353,20 @@ export class Parse {
     const ast = rollupTransformPluginContext.parse(code) as Node
     let scope = attachScopes(ast, 'scope')
     const magicStr = new MagicString(code)
-    const bindings = scanForImportsAndExports(ast, magicStr, this.dependencies)
+    const bindings = scanForImportsAndExports(ast, magicStr, this.dependenciesGraph, this.dependencies)
     // We get all dependencies grpah in scanner stage.
     // According dependencies graph we can infer the referernce.
-    const parseContext = this
     walk(ast as Node, {
       enter(node, parent) {
-        if (node.type === IMPORT_DECLARATION) {
+        if (node.type === IMPORT_DECLARATION || node.type === EXPORT_ALL_DECLARATION) {
           this.skip()
           return
         }
-        if (node.type === EXPORT_ALL_DECLARATION) {
-          this.skip()
-          overWriteExportAllDeclaration(node, magicStr, parseContext.dependenciesGraph, parseContext.dependencies)
-        }
         if (node.type === EXPORT_NAMED_DECLARATION) {
           this.skip()
-          overWriteExportNamedDeclaration(node, magicStr, parseContext.dependencies)
+          if (!node.source) {
+            return
+          }
         }
         if (node.scope) {
           // eslint-disable-next-line prefer-destructuring
