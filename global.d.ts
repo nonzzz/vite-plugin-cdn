@@ -16,6 +16,12 @@ declare module 'estree' {
   interface ExportAllDeclaration extends Loc {}
   // eslint-disable-next-line @typescript-eslint/no-empty-interface
   interface ImportDeclaration extends Loc {}
+  // eslint-disable-next-line @typescript-eslint/no-empty-interface
+  interface FunctionDeclaration extends Loc {}
+  // eslint-disable-next-line @typescript-eslint/no-empty-interface
+  interface VariableDeclaration extends Loc {}
+  // eslint-disable-next-line @typescript-eslint/no-empty-interface
+  interface ClassDeclaration extends Loc {}
 }
 
 export {}

@@ -4,7 +4,7 @@ import { attachScopes } from '@rollup/pluginutils'
 import { parse as esModuleLexer } from 'rs-module-lexer'
 import { len } from './shared'
 import type { AttachedScope } from '@rollup/pluginutils'
-import type { Node as EsNode, ExportNamedDeclaration, ExportAllDeclaration } from 'estree'
+import type { Node as EsNode, ExportNamedDeclaration, ExportAllDeclaration, Identifier } from 'estree'
 import type { TransformPluginContext } from 'vite'
 import type { IIFEModuleInfo } from './interface'
 
@@ -174,7 +174,7 @@ function walk(ast: Node, handle: WalkOptions) {
   return instance.visit(ast, null)
 }
 
-// isRefernce is implement from  https://github.com/Rich-Harris/is-reference
+// isReference is implement from  https://github.com/Rich-Harris/is-reference
 // MIT LICENSE
 function isReference(node: Node, parent: Node) {
   if (node.type === 'MemberExpression') {
@@ -202,6 +202,41 @@ function isReference(node: Node, parent: Node) {
         return true
     }
   }
+}
+
+function scanNamedExportsAndRewrite(code: string, rollupTransformPluginContext: TransformPluginContext) {
+  const exports = []
+  const ast = rollupTransformPluginContext.parse(code) as Node
+  const magicStr = new MagicString(code)
+  walk(ast, {
+    enter(node) {
+      if (node.type === 'ExportNamedDeclaration') {
+        if (!node.source) {
+          const exportKeyWordStart = node.start
+          let exportKeyWordEnd: number
+          if (node.declaration) {
+            if (node.declaration.type === 'VariableDeclaration') {
+              if (node.declaration.declarations[0].type === 'VariableDeclarator') {
+                exports.push((node.declaration.declarations[0].id as Identifier).name)
+              }
+              exportKeyWordEnd = node.declaration.start
+            }
+            if (node.declaration.type === 'FunctionDeclaration') {
+              exports.push(node.declaration.id.name)
+              exportKeyWordEnd = node.declaration.start
+            }
+            if (node.declaration.type === 'ClassDeclaration') {
+              exports.push(node.declaration.id.name)
+              exportKeyWordEnd = node.declaration.start
+            }
+            const code = magicStr.slice(exportKeyWordEnd, node.declaration.end)
+            magicStr.overwrite(exportKeyWordStart, node.end, code, { contentOnly: true })
+          }
+        }
+      }
+    }
+  })
+  return { exports, code: magicStr.toString() }
 }
 
 // overwrite source code imports and exports
@@ -244,8 +279,7 @@ function scanForImportsAndExports(
         overWriteExportAllDeclaration(n, magicStr, depsGraph, deps)
         break
       case 'ExportNamedDeclaration':
-        if (!n.source) break
-        overWriteExportNamedDeclaration(n, magicStr, deps)
+        if (n.source) overWriteExportNamedDeclaration(n, magicStr, deps)
     }
   }
 
@@ -350,23 +384,22 @@ export class Parse {
     return false
   }
   overWrite(code: string, rollupTransformPluginContext: TransformPluginContext) {
-    const ast = rollupTransformPluginContext.parse(code) as Node
-    let scope = attachScopes(ast, 'scope')
-    const magicStr = new MagicString(code)
+    const { exports, code: serialzedCode } = scanNamedExportsAndRewrite(code, rollupTransformPluginContext)
+    const ast = rollupTransformPluginContext.parse(serialzedCode) as Node
+    const magicStr = new MagicString(serialzedCode)
     const bindings = scanForImportsAndExports(ast, magicStr, this.dependenciesGraph, this.dependencies)
     // We get all dependencies grpah in scanner stage.
     // According dependencies graph we can infer the referernce.
+    let scope = attachScopes(ast, 'scope')
     walk(ast as Node, {
       enter(node, parent) {
-        if (node.type === IMPORT_DECLARATION || node.type === EXPORT_ALL_DECLARATION) {
+        if (
+          node.type === IMPORT_DECLARATION ||
+          node.type === EXPORT_ALL_DECLARATION ||
+          node.type === EXPORT_NAMED_DECLARATION
+        ) {
           this.skip()
           return
-        }
-        if (node.type === EXPORT_NAMED_DECLARATION) {
-          this.skip()
-          if (!node.source) {
-            return
-          }
         }
         if (node.scope) {
           // eslint-disable-next-line prefer-destructuring
@@ -389,6 +422,9 @@ export class Parse {
         }
       }
     })
+    if (len(exports)) {
+      magicStr.append(`export { ${exports.join(' , ')} }`)
+    }
     return { code: magicStr.toString(), map: magicStr.generateMap() }
   }
 }
