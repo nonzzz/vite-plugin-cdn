@@ -3,24 +3,41 @@
     <p>vite-plugin-cdn2 example</p>
     <p>{{ counter.count }}</p>
     <var-button size="mini" auto @click="clickHandler">Button</var-button>
+    <p>This is a mock data</p>
+    <p>{{ mock?.title }}</p>
+    <var-button size="mini" auto @click="handleRequest">Button</var-button>
   </div>
 </template>
 
 <script>
-import { defineComponent } from 'vue'
+import { defineComponent, ref } from 'vue'
+import axios from 'axios'
 import { useCounterStore } from './counter'
 
 export default defineComponent({
   setup() {
+    const mock = ref({ title: 'Init Titlte' })
     const counter = useCounterStore()
+
     const clickHandler = () => {
       console.log('hello world')
       counter.increment()
     }
 
+    const handleRequest = async () => {
+      try {
+        const r = await axios.get('https://jsonplaceholder.typicode.com/todos/1')
+        if (r.data) {
+          mock.value = r.data
+        }
+      } catch (error) {}
+    }
+
     return {
       clickHandler,
-      counter
+      handleRequest,
+      counter,
+      mock
     }
   }
 })

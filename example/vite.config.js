@@ -11,7 +11,7 @@ export default defineConfig({
     Components({ resolvers: [VarletUIResolver()] }),
     {
       ...cdn({
-        modules: ['vue', 'vue-demi', 'pinia', '@varlet/ui']
+        modules: ['vue', 'vue-demi', 'pinia', '@varlet/ui', 'axios']
       }),
       apply: 'serve'
     },
