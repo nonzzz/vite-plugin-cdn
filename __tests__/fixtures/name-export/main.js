@@ -1,7 +1,7 @@
-import { getPrettierVersion, _getPrettierVersion, getVersion } from './exports'
+import { getVueVersion, _getVueVersion, getVersion } from './exports'
 
-console.log(getPrettierVersion())
+console.log(getVueVersion())
 
-console.log(_getPrettierVersion())
+console.log(_getVueVersion())
 
 console.log(getVersion())

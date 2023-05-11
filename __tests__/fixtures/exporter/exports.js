@@ -1,4 +1,3 @@
-export * from 'prettier'
-export * as prettier from 'prettier'
-
-export { version as default } from 'prettier'
+export * from 'vue'
+export * as vue from 'vue'
+export { version  as default } from 'vue'

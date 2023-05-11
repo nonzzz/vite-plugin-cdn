@@ -1,15 +1,17 @@
-import prettier from 'prettier'
-import { version, doc } from 'prettier'
+import * as vue from 'vue'
+import { ref ,version } from 'vue'
 
-console.log(prettier.version)
-console.log(version)
+console.log(vue.version)
 
-console.log(doc)
+const v = ref(0)
 
-function scoped() {
-  const doc = 1
-  const version = 2
-  console.log(doc, version)
+function scoped(){
+  const v = 1
+  console.log(v)
+  console.log(version)
+  console.log(vue.version)
 }
 
 scoped()
+
+console.log(v)

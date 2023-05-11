@@ -29,16 +29,16 @@ test.after(async () => {
 })
 
 test('plugin importer case', async (t) => {
-  await mockBuild('importer', { modules: ['prettier'] })
+  await mockBuild('importer', { modules: ['vue'] })
   t.pass()
 })
 
 test('plugin exporter case', async (t) => {
-  await mockBuild('exporter', { modules: ['prettier'] })
+  await mockBuild('exporter', { modules: ['vue'] })
   t.pass()
 })
 
 test('plugin named exporter case', async (t) => {
-  await mockBuild('name-export', { modules: ['prettier'] })
+  await mockBuild('name-export', { modules: ['vue'] })
   t.pass()
 })
