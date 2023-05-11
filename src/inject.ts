@@ -6,7 +6,7 @@ import { uniq } from './shared'
 
 const DOMAIN: Record<Exclude<PresetDomain, false | 'auto'>, string> = {
   jsdelivr: 'https://cdn.jsdelivr.net/npm/',
-  unpkg: 'https://unpkg.com/'
+  unpkg: 'https://unpkg.com/',
 }
 
 function isScript(url: string) {
@@ -134,7 +134,7 @@ class InjectScript {
 export function createInjectScript(
   dependModules: Record<string, IIFEModuleInfo>,
   moduleNames: string[],
-  mode: PresetDomain
+  mode: PresetDomain,
 ) {
   return new InjectScript(dependModules, moduleNames, mode)
 }

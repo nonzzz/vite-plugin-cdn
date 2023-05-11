@@ -19,7 +19,7 @@ function createWorkerThreads(scannerModule: TrackModule[]) {
   const worker = new worker_threads.Worker(__filename, {
     workerData: { workerPort, internalThread: true, scannerModule },
     transferList: [workerPort],
-    execArgv: []
+    execArgv: [],
   })
   // record thread id
   const id = 0
@@ -42,7 +42,7 @@ function createWorkerThreads(scannerModule: TrackModule[]) {
 async function tryResolveModule(
   module: TrackModule,
   vm: ReturnType<typeof createVM>,
-  dependenciesGraph: DependenciesGraph
+  dependenciesGraph: DependenciesGraph,
 ) {
   const { name: moduleName, ...rest } = module
 
@@ -70,7 +70,7 @@ async function tryResolveModule(
       version,
       unpkg,
       jsdelivr,
-      ...rest
+      ...rest,
     }
     // if user prvoide the global name . Skip eval script
   } else {
@@ -100,7 +100,7 @@ function startAsyncThreads() {
   const vm = createVM()
   const dependenciesGraph: DependenciesGraph = Object.create(null)
   parentPort?.on('message', (msg) => {
-    ;(async () => {
+    (async () => {
       const { id } = msg
       // An Idea. We won't need ensure the task order.
       // We only need two tasks. First is the import module.(Node.js has implement  `import('module')`)

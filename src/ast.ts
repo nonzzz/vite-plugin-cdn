@@ -57,7 +57,7 @@ class Walker {
     this.context = {
       skip: () => (this.should_skip = true),
       remove: () => (this.should_remove = true),
-      replace: (node) => (this.replacement = node)
+      replace: (node) => (this.replacement = node),
     }
   }
   private replace(parent, prop, index, node) {
@@ -83,7 +83,7 @@ class Walker {
     node: Node,
     parent: Node | null,
     prop?: string | number | symbol | null | undefined,
-    index?: number | null | undefined
+    index?: number | null | undefined,
   ): Node | null {
     if (node) {
       if (this.enter) {
@@ -234,7 +234,7 @@ function scanNamedExportsAndRewrite(code: string, rollupTransformPluginContext: 
           }
         }
       }
-    }
+    },
   })
   return { exports, code: magicStr.toString() }
 }
@@ -246,7 +246,7 @@ function scanForImportsAndExports(
   node: Node,
   magicStr: MagicString,
   depsGraph: Record<string, string[]>,
-  deps: Record<string, IIFEModuleInfo>
+  deps: Record<string, IIFEModuleInfo>,
 ) {
   const bindings: Map<string, { alias: string }> = new Map()
   if (node.type !== 'Program') return bindings
@@ -262,14 +262,14 @@ function scanForImportsAndExports(
             // import * as module from 'module-name'
             if (specifier.type === 'ImportDefaultSpecifier' || specifier.type === 'ImportNamespaceSpecifier') {
               bindings.set(specifier.local.name, {
-                alias: globalName
+                alias: globalName,
               })
             }
             // import { a1, b2 } from 'module-name'
             // import {s as S } from 'module-name'
             if (specifier.type === 'ImportSpecifier') {
               bindings.set(specifier.local.name, {
-                alias: `${globalName}.${specifier.imported.name}`
+                alias: `${globalName}.${specifier.imported.name}`,
               })
             }
           }
@@ -296,7 +296,7 @@ function overWriteExportAllDeclaration(
   node: ExportAllDeclaration,
   magicStr: MagicString,
   depsGraph: Record<string, string[]>,
-  deps: Record<string, IIFEModuleInfo>
+  deps: Record<string, IIFEModuleInfo>,
 ) {
   const ref = node.source.value as string
   if (ref in depsGraph) {
@@ -316,7 +316,7 @@ function overWriteExportAllDeclaration(
 function overWriteExportNamedDeclaration(
   node: ExportNamedDeclaration,
   magicStr: MagicString,
-  deps: Record<string, IIFEModuleInfo>
+  deps: Record<string, IIFEModuleInfo>,
 ) {
   const ref = node.source.value as string
   const bindings: Record<string, string> = {}
@@ -368,9 +368,9 @@ export class Parse {
       input: [
         {
           filename: id,
-          code
-        }
-      ]
+          code,
+        },
+      ],
     })
 
     if (!len(output)) return false
@@ -394,9 +394,9 @@ export class Parse {
     walk(ast as Node, {
       enter(node, parent) {
         if (
-          node.type === IMPORT_DECLARATION ||
-          node.type === EXPORT_ALL_DECLARATION ||
-          node.type === EXPORT_NAMED_DECLARATION
+          node.type === IMPORT_DECLARATION
+          || node.type === EXPORT_ALL_DECLARATION
+          || node.type === EXPORT_NAMED_DECLARATION
         ) {
           this.skip()
           return
@@ -420,7 +420,7 @@ export class Parse {
         if (node.scope) {
           scope = node.scope.parent
         }
-      }
+      },
     })
     if (len(exports)) {
       magicStr.append(`export { ${exports.join(' , ')} }`)

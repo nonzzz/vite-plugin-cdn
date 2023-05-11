@@ -14,11 +14,11 @@ export async function mockBuild(dir: string, pluginOptions: CDNPluginOptions = {
   await build({
     root: path.join(defaultWd, 'fixtures', dir),
     build: {
-      outDir: path.join(dist, `${dir}-${id}`)
+      outDir: path.join(dist, `${dir}-${id}`),
     },
     plugins: [cdn(pluginOptions)],
     configFile: false,
-    logLevel: 'silent'
+    logLevel: 'silent',
   })
   await sleep(5000)
   return id
