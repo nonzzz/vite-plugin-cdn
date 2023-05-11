@@ -59,8 +59,9 @@ async function tryResolveModule(
       packageJsonPath = lookup(modulePath, 'package.json')
       const str = await fsp.readFile(packageJsonPath, 'utf8')
       Object.assign(packageJson, JSON.parse(str))
+    } else {
+      throw new Error('Internal error:' + error)
     }
-    throw new Error('Internal error:' + error)
   }
   // // https://docs.npmjs.com/cli/v9/configuring-npm/package-json#browser
   const { version, name, unpkg, jsdelivr, browser } = packageJson
