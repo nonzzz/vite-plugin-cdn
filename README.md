@@ -58,6 +58,7 @@ export interface CDNPluginOptions {
    * Transform can replace the capture result. and rewrite them.
    */
   transform?: () => InjectVisitor
+  logLevel?:  "slient" | "warn"
 }
 ```
 
