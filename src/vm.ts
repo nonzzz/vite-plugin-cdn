@@ -9,6 +9,7 @@ import type { IIFEModuleInfo } from './interface'
 // Maybe we can define a replacement env.
 
 // This is a temporary solution.
+
 export function createVM() {
   const bindings: Record<string, IIFEModuleInfo> = {}
   const window = new Window()
@@ -48,10 +49,12 @@ class Queue {
     this.queue = []
     this.running = 0
   }
+
   enqueue(task: () => Promise<void>) {
     this.queue.push(task)
     this.run()
   }
+
   async run() {
     while (this.running < this.maxConcurrent && this.queue.length) {
       const task = this.queue.shift()
@@ -64,6 +67,7 @@ class Queue {
       }
     }
   }
+
   async wait() {
     while (this.running) {
       await new Promise((resolve) => setTimeout(resolve, 0))

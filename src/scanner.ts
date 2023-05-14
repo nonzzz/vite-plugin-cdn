@@ -19,7 +19,7 @@ function createWorkerThreads(scannerModule: TrackModule[]) {
   const worker = new worker_threads.Worker(__filename, {
     workerData: { workerPort, internalThread: true, scannerModule },
     transferList: [workerPort],
-    execArgv: [],
+    execArgv: []
   })
   // record thread id
   const id = 0
@@ -42,13 +42,14 @@ function createWorkerThreads(scannerModule: TrackModule[]) {
 async function tryResolveModule(
   module: TrackModule,
   vm: ReturnType<typeof createVM>,
-  dependenciesGraph: DependenciesGraph,
+  dependenciesGraph: DependenciesGraph
 ) {
   const { name: moduleName, ...rest } = module
 
   const packageJson: IIFEModuleInfo & { browser: string } = Object.create(null)
   let packageJsonPath = ''
   try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
     Object.assign(packageJson, require(`${moduleName}/package.json`))
     packageJsonPath = require.resolve(`${moduleName}/package.json`)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -67,11 +68,11 @@ async function tryResolveModule(
   const { version, name, unpkg, jsdelivr, browser } = packageJson
   if (rest.global) {
     vm.bindings[name] = {
-      name: name,
+      name,
       version,
       unpkg,
       jsdelivr,
-      ...rest,
+      ...rest
     }
     // if user prvoide the global name . Skip eval script
   } else {
@@ -133,11 +134,13 @@ class Scanner {
     this.modules = this.serialization(modules)
     this.dependencies = {}
   }
+
   public async scanAllDependencies() {
     const { bindings, dependenciesGraph } = await createWorkerThreads(this.modules)
     this.dependencies = bindings
     this.dependenciesGraph = dependenciesGraph
   }
+
   private serialization(modules: Array<TrackModule | string>) {
     is(Array.isArray(modules), 'vite-plugin-cdn2: option module must be array')
     return uniq(modules)
@@ -147,13 +150,21 @@ class Scanner {
       })
       .filter((v) => v.name)
   }
+
   // ensure the order
   get dependModuleNames() {
     const deps = Object.keys(this.dependencies)
     return this.modules.map((v) => v.name).filter((v) => deps.includes(v))
   }
-  // TODO
-  // Record can't be resolved module.
+
+  get failedModuleNames() {
+    const failedModules:string[] = []
+    this.modules.forEach((module) => {
+      if (module.name in this.dependencies) return
+      failedModules.push(module.name)
+    })
+    return failedModules
+  }
 }
 
 export function createScanner(modules: Array<TrackModule | string>) {

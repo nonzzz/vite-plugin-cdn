@@ -4,7 +4,7 @@ import { attachScopes } from '@rollup/pluginutils'
 import { parse as esModuleLexer } from 'rs-module-lexer'
 import { len } from './shared'
 import type { AttachedScope } from '@rollup/pluginutils'
-import type { Node as EsNode, ExportNamedDeclaration, ExportAllDeclaration, Identifier } from 'estree'
+import type { Node as EsNode, ExportNamedDeclaration, ExportAllDeclaration, Identifier  } from 'estree'
 import type { TransformPluginContext } from 'vite'
 import type { IIFEModuleInfo } from './interface'
 
@@ -57,9 +57,10 @@ class Walker {
     this.context = {
       skip: () => (this.should_skip = true),
       remove: () => (this.should_remove = true),
-      replace: (node) => (this.replacement = node),
+      replace: (node) => (this.replacement = node)
     }
   }
+
   private replace(parent, prop, index, node) {
     if (parent && prop) {
       // eslint-disable-next-line eqeqeq
@@ -70,6 +71,7 @@ class Walker {
       }
     }
   }
+
   private remove(parent, prop, index) {
     if (parent && prop) {
       if (index !== null && index !== undefined) {
@@ -79,11 +81,12 @@ class Walker {
       }
     }
   }
+
   visit(
     node: Node,
     parent: Node | null,
     prop?: string | number | symbol | null | undefined,
-    index?: number | null | undefined,
+    index?: number | null | undefined
   ): Node | null {
     if (node) {
       if (this.enter) {
@@ -234,7 +237,7 @@ function scanNamedExportsAndRewrite(code: string, rollupTransformPluginContext: 
           }
         }
       }
-    },
+    }
   })
   return { exports, code: magicStr.toString() }
 }
@@ -246,13 +249,13 @@ function scanForImportsAndExports(
   node: Node,
   magicStr: MagicString,
   depsGraph: Record<string, string[]>,
-  deps: Record<string, IIFEModuleInfo>,
+  deps: Record<string, IIFEModuleInfo>
 ) {
   const bindings: Map<string, { alias: string }> = new Map()
   if (node.type !== 'Program') return bindings
   for (const n of node.body) {
     switch (n.type) {
-      case 'ImportDeclaration':
+      case 'ImportDeclaration': {
         const ref = n.source.value as string
         if (ref in deps) {
           magicStr.remove(n.start, n.end)
@@ -262,19 +265,20 @@ function scanForImportsAndExports(
             // import * as module from 'module-name'
             if (specifier.type === 'ImportDefaultSpecifier' || specifier.type === 'ImportNamespaceSpecifier') {
               bindings.set(specifier.local.name, {
-                alias: globalName,
+                alias: globalName
               })
             }
             // import { a1, b2 } from 'module-name'
             // import {s as S } from 'module-name'
             if (specifier.type === 'ImportSpecifier') {
               bindings.set(specifier.local.name, {
-                alias: `${globalName}.${specifier.imported.name}`,
+                alias: `${globalName}.${specifier.imported.name}`
               })
             }
           }
         }
         break
+      }
       case 'ExportAllDeclaration':
         overWriteExportAllDeclaration(n, magicStr, depsGraph, deps)
         break
@@ -296,7 +300,7 @@ function overWriteExportAllDeclaration(
   node: ExportAllDeclaration,
   magicStr: MagicString,
   depsGraph: Record<string, string[]>,
-  deps: Record<string, IIFEModuleInfo>,
+  deps: Record<string, IIFEModuleInfo>
 ) {
   const ref = node.source.value as string
   if (ref in depsGraph) {
@@ -316,7 +320,7 @@ function overWriteExportAllDeclaration(
 function overWriteExportNamedDeclaration(
   node: ExportNamedDeclaration,
   magicStr: MagicString,
-  deps: Record<string, IIFEModuleInfo>,
+  deps: Record<string, IIFEModuleInfo>
 ) {
   const ref = node.source.value as string
   const bindings: Record<string, string> = {}
@@ -325,10 +329,10 @@ function overWriteExportNamedDeclaration(
     for (const specifier of node.specifiers) {
       if (specifier.local.name) {
         if (specifier.local.name === 'default') {
-          bindings['__inject__export__default__'] = globalName
+          bindings.__inject__export__default__ = globalName
         } else {
           if (specifier.exported.name === 'default') {
-            bindings['__inject__export__default__'] = `${globalName}.${specifier.local.name}`
+            bindings.__inject__export__default__ = `${globalName}.${specifier.local.name}`
           } else {
             bindings[specifier.local.name] = `${globalName}.${specifier.local.name}`
           }
@@ -359,18 +363,20 @@ export class Parse {
   constructor() {
     this.dependencies = {}
   }
+
   injectDependencies(dependenciesGraph: Record<string, string[]>, dependencies: Record<string, IIFEModuleInfo>) {
     this.dependencies = dependencies
     this.dependenciesGraph = dependenciesGraph
   }
+
   filter(code: string, id: string) {
     const { output } = esModuleLexer({
       input: [
         {
           filename: id,
-          code,
-        },
-      ],
+          code
+        }
+      ]
     })
 
     if (!len(output)) return false
@@ -383,6 +389,7 @@ export class Parse {
     }
     return false
   }
+
   overWrite(code: string, rollupTransformPluginContext: TransformPluginContext) {
     const { exports, code: serialzedCode } = scanNamedExportsAndRewrite(code, rollupTransformPluginContext)
     const ast = rollupTransformPluginContext.parse(serialzedCode) as Node
@@ -394,9 +401,9 @@ export class Parse {
     walk(ast as Node, {
       enter(node, parent) {
         if (
-          node.type === IMPORT_DECLARATION
-          || node.type === EXPORT_ALL_DECLARATION
-          || node.type === EXPORT_NAMED_DECLARATION
+          node.type === IMPORT_DECLARATION ||
+          node.type === EXPORT_ALL_DECLARATION ||
+          node.type === EXPORT_NAMED_DECLARATION
         ) {
           this.skip()
           return
@@ -420,7 +427,7 @@ export class Parse {
         if (node.scope) {
           scope = node.scope.parent
         }
-      },
+      }
     })
     if (len(exports)) {
       magicStr.append(`export { ${exports.join(' , ')} }`)

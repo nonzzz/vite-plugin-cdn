@@ -21,7 +21,7 @@ export function len<T extends ArrayLike<unknown>>(source: T) {
 export function uniq<T>(arr: NonNullable<T>[]) {
   const result: T[] = []
   const record = new Map<unknown, boolean>()
-  arr.map((item) => {
+  arr.forEach((item) => {
     const key = typeof item === 'object' ? JSON.stringify(item) : item
     if (!record.has(key)) {
       result.push(item)

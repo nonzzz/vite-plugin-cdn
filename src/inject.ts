@@ -6,7 +6,7 @@ import { uniq } from './shared'
 
 const DOMAIN: Record<Exclude<PresetDomain, false | 'auto'>, string> = {
   jsdelivr: 'https://cdn.jsdelivr.net/npm/',
-  unpkg: 'https://unpkg.com/',
+  unpkg: 'https://unpkg.com/'
 }
 
 function isScript(url: string) {
@@ -18,11 +18,13 @@ class InjectScript {
     links: Record<string, LinkNode>
     scripts: Record<string, ScriptNode>
   }
+
   private window: Window
   constructor(modules: Record<string, IIFEModuleInfo>, moduleNames: string[], mode: PresetDomain) {
     this.modules = this.prepareModules(modules, moduleNames, mode)
     this.window = new Window()
   }
+
   toTags() {
     const nodes = [...Object.values(this.modules.scripts), ...Object.values(this.modules.links)]
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -44,6 +46,7 @@ class InjectScript {
       })
     })
   }
+
   inject(html: string, transformHook: undefined | CDNPluginOptions['transform']) {
     const { document } = this.window
     document.body.innerHTML = html
@@ -56,13 +59,14 @@ class InjectScript {
         hook.link?.(this.modules.links[module])
       }
     }
-    //issue #6
+    // issue #6
     const element = document.body.querySelector('title')
     const tags = this.toTags()
     const text = tags.join('\n')
     element.insertAdjacentHTML('beforebegin', text)
     return document.body.innerHTML
   }
+
   private prepareModules(modules: Record<string, IIFEModuleInfo>, moduleNames: string[], mode: PresetDomain) {
     // we need moduleNames ensure us sciprt or link insertion order.
     const makeNode = (module: IIFEModuleInfo, tag: ReturnType<typeof isScript>): ScriptNode | LinkNode => {
@@ -115,6 +119,7 @@ class InjectScript {
     })
     return { links, scripts }
   }
+
   // we handle all dependenices in scanner. So in this stage. The module
   // must have the following fields.
   private makeURL(module: IIFEModuleInfo, mode: Exclude<PresetDomain, false>) {
@@ -134,7 +139,7 @@ class InjectScript {
 export function createInjectScript(
   dependModules: Record<string, IIFEModuleInfo>,
   moduleNames: string[],
-  mode: PresetDomain,
+  mode: PresetDomain
 ) {
   return new InjectScript(dependModules, moduleNames, mode)
 }

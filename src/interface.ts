@@ -14,29 +14,13 @@ export interface IIFEModuleInfo extends TrackModule {
   jsdelivr?: string
 }
 
-export type ScriptNode = ScriptAttributes &
-  Omit<Serialization, 'tag' | 'type'> & {
-    tag: 'script'
-  }
-
-export type LinkNode = LinkAttrobites &
-  Omit<Serialization, 'tag' | 'type'> & {
-    tag: 'link'
-  }
-
-export interface InjectVisitor {
-  script?: (node: ScriptNode) => void
-  link?: (node: LinkNode) => void
+export interface Serialization {
+  url?: string[]
+  type?: string
+  name: string
+  tag: 'link' | 'script'
 }
 
-export interface CDNPluginOptions {
-  modules?: Array<TrackModule | string>
-  preset?: PresetDomain
-  mode?: PresetDomain
-  transform?: () => InjectVisitor
-  include?: FilterPattern
-  exclude?: FilterPattern
-}
 
 export type ScriptAttributes = Partial<
   Pick<
@@ -63,9 +47,28 @@ export type LinkAttrobites = Partial<
   >
 >
 
-export interface Serialization {
-  url?: string[]
-  type?: string
-  name: string
-  tag: 'link' | 'script'
+export type ScriptNode = ScriptAttributes &
+  Omit<Serialization, 'tag' | 'type'> & {
+    tag: 'script'
+  }
+
+export type LinkNode = LinkAttrobites &
+  Omit<Serialization, 'tag' | 'type'> & {
+    tag: 'link'
+  }
+
+export interface InjectVisitor {
+  script?: (node: ScriptNode) => void
+  link?: (node: LinkNode) => void
 }
+
+export interface CDNPluginOptions {
+  modules?: Array<TrackModule | string>
+  preset?: PresetDomain
+  mode?: PresetDomain
+  transform?: () => InjectVisitor
+  include?: FilterPattern
+  exclude?: FilterPattern
+  logLevel?:'slient' | 'warn'
+}
+
