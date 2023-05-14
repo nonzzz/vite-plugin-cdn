@@ -14,6 +14,11 @@ export interface IIFEModuleInfo extends TrackModule {
   jsdelivr?: string
 }
 
+export interface ModuleInfo extends IIFEModuleInfo{
+  bindings:Set<string>
+  code?:string
+}
+
 export interface Serialization {
   url?: string[]
   type?: string

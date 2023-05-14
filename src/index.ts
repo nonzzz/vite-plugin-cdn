@@ -20,7 +20,7 @@ function cdn(opts: CDNPluginOptions = {}): Plugin {
       try {
         if (!isSupport) throw new Error(`vite-plugin-cdn2 can't work with nodejs ${version}.`)
         await scanner.scanAllDependencies()
-        parse.injectDependencies(scanner.dependenciesGraph, scanner.dependencies)
+        parse.injectDependencies(scanner.dependencies)
         if (logLevel === 'warn') {
           scanner.failedModuleNames.forEach((name) => config.logger.error(`vite-plugin-cdn2: ${name} resolved failed.Please check it.`))
         }

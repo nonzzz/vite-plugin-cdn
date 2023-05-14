@@ -3,23 +3,13 @@ import worker_threads from 'worker_threads'
 import { createConcurrentQueue, createVM, MAX_CONCURRENT } from './vm'
 import { is, lookup, uniq } from './shared'
 import type { MessagePort } from 'worker_threads'
-import type { TrackModule, IIFEModuleInfo } from './interface'
+import type { TrackModule, IIFEModuleInfo, ModuleInfo } from './interface'
 
 interface WorkerData {
   scannerModule: TrackModule[]
   workerPort: MessagePort
   internalThread: boolean
 }
-
-interface Dependencies extends TrackModule{
-  name:string
-  version:string
-  unpkg?:string
-  jsdelivr?:string
-  code?:string
-}
-
-type DependenciesGraph = Record<string, string[]>
 
 function createWorkerThreads(scannerModule: TrackModule[]) {
   const { port1: mainPort, port2: workerPort } = new worker_threads.MessageChannel()
@@ -36,21 +26,17 @@ function createWorkerThreads(scannerModule: TrackModule[]) {
     return new Promise((resolve, reject) => {
       mainPort.on('message', (message) => {
         if (message.id !== id) reject(new Error(`Internal error: Expected id ${id} but got id ${message.id}`))
-        resolve({ bindings: message.bindings, dependenciesGraph: message.dependenciesGraph })
+        resolve(message.bindings)
         worker.terminate()
       })
     })
   }
-  return run() as Promise<{
-    bindings: Record<string, IIFEModuleInfo>
-    dependenciesGraph: DependenciesGraph
-  }>
+  return run() as Promise<Record<string, ModuleInfo>>
 }
 
 async function tryResolveModule(
   module: TrackModule,
-  dependenciesMap:Map<string, Dependencies>,
-  dependenciesGraph: DependenciesGraph
+  dependenciesMap:Map<string, ModuleInfo>
 ) {
   const { name: moduleName, ...rest } = module
 
@@ -72,17 +58,17 @@ async function tryResolveModule(
       throw new Error('Internal error:' + error)
     }
   }
-  // // https://docs.npmjs.com/cli/v9/configuring-npm/package-json#browser
+  // https://docs.npmjs.com/cli/v9/configuring-npm/package-json#browser
   const { version, name, unpkg, jsdelivr, browser } = packageJson
+  // if user prvoide the global name . Skip eval script
   if (rest.global) {
-    dependenciesMap.set(name, { name, version, unpkg, jsdelivr, ...rest })
-    // if user prvoide the global name . Skip eval script
+    dependenciesMap.set(name, { name, version, unpkg, jsdelivr, bindings: new Set(), ...rest  })
   } else {
     const iifeRelativePath = typeof browser === 'string' ? browser : jsdelivr ?? unpkg
     if (!iifeRelativePath) return
     const iifeFilePath = lookup(packageJsonPath, iifeRelativePath)
     const code = await fsp.readFile(iifeFilePath, 'utf8')
-    dependenciesMap.set(name, { name, version, unpkg, jsdelivr, code, ...rest })
+    dependenciesMap.set(name, { name, version, unpkg, jsdelivr, code, bindings: new Set(), ...rest })
   }
   const pkg = await import(moduleName)
   const keys = Object.keys(pkg)
@@ -91,7 +77,9 @@ async function tryResolveModule(
     keys.splice(pos, 1)
     keys.push(...Object.keys(pkg.default))
   }
-  dependenciesGraph[name] = uniq(keys.sort())
+  if (dependenciesMap.has(name)) {
+    dependenciesMap.get(name).bindings = new Set(keys)
+  }
 }
 
 function startAsyncThreads() {
@@ -99,8 +87,7 @@ function startAsyncThreads() {
   const { workerPort, scannerModule } = worker_threads.workerData as WorkerData
   const { parentPort } = worker_threads
   const vm = createVM()
-  const dependenciesGraph: DependenciesGraph = Object.create(null)
-  const dependenciesMap: Map<string, Dependencies> = new Map()
+  const dependenciesMap: Map<string, ModuleInfo> = new Map()
   parentPort?.on('message', (msg) => {
     (async () => {
       const { id } = msg
@@ -111,7 +98,7 @@ function startAsyncThreads() {
       try {
         const queue = createConcurrentQueue(MAX_CONCURRENT)
         for (const module of scannerModule) {
-          queue.enqueue(() => tryResolveModule(module, dependenciesMap, dependenciesGraph))
+          queue.enqueue(() => tryResolveModule(module, dependenciesMap))
         }
         // 
         await queue.wait()
@@ -130,7 +117,7 @@ function startAsyncThreads() {
           }
         }
         dependenciesMap.clear()
-        workerPort.postMessage({ bindings: vm.bindings, id, dependenciesGraph })
+        workerPort.postMessage({ bindings: vm.bindings, id  })
       } catch (error) {
         //
       }
@@ -144,17 +131,14 @@ if (worker_threads.workerData?.internalThread) {
 
 class Scanner {
   modules: Array<TrackModule>
-  dependencies: Record<string, IIFEModuleInfo>
-  dependenciesGraph: DependenciesGraph
+  dependencies: Record<string, ModuleInfo>
   constructor(modules: Array<TrackModule | string>) {
     this.modules = this.serialization(modules)
     this.dependencies = {}
   }
 
   public async scanAllDependencies() {
-    const { bindings, dependenciesGraph } = await createWorkerThreads(this.modules)
-    this.dependencies = bindings
-    this.dependenciesGraph = dependenciesGraph
+    this.dependencies = await createWorkerThreads(this.modules)
   }
 
   private serialization(modules: Array<TrackModule | string>) {

@@ -1,28 +1,18 @@
 import os from 'os'
 import vm from 'vm'
 import { Window } from 'happy-dom'
-import type { IIFEModuleInfo } from './interface'
-
-// v0.4.0
-// I notice using happy-dom as vm context may casue some bug.
-// some modules don't work. Called syntax error.
-// Maybe we can define a replacement env.
-
-// This is a temporary solution.
-
-// I think we can use vm as first. Then pipe the result to happy dom context
-
+import type { ModuleInfo } from './interface'
 
 export function createVM() {
-  const bindings: Record<string, IIFEModuleInfo> = {}
+  const bindings: Record<string, ModuleInfo> = {}
   const window = new Window()
   const context = Object.create(null)
   vm.createContext(context)
-  let _opt:IIFEModuleInfo = null
-  let _invoke:(info: IIFEModuleInfo) => IIFEModuleInfo | null
+  let _opt:ModuleInfo = null
+  let _invoke:(info: ModuleInfo) => ModuleInfo | null
   let _id = 0
 
-  const updateBindgs = (opt:IIFEModuleInfo, globalName:string, invoke:(info: IIFEModuleInfo) => IIFEModuleInfo | null) => {
+  const updateBindgs = (opt:ModuleInfo, globalName:string, invoke:(info: ModuleInfo) => ModuleInfo | null) => {
     if (opt && !bindings[opt.name]) {
       const re = invoke({ ...opt, global: globalName })
       if (!re) return
@@ -37,7 +27,7 @@ export function createVM() {
       return true
     }
   })
-  const run = (code: string, opt: IIFEModuleInfo, invoke: (info: IIFEModuleInfo) => IIFEModuleInfo | null) => {
+  const run = (code: string, opt: ModuleInfo, invoke: (info: ModuleInfo) => ModuleInfo | null) => {
     let id = 0
     _opt = opt
     _invoke = invoke
