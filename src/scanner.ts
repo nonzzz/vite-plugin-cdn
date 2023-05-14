@@ -3,7 +3,7 @@ import worker_threads from 'worker_threads'
 import { createConcurrentQueue, createVM, MAX_CONCURRENT } from './vm'
 import { is, lookup, uniq } from './shared'
 import type { MessagePort } from 'worker_threads'
-import type { TrackModule, IIFEModuleInfo } from './interface'
+import type { TrackModule, IIFEModuleInfo, ModuleInfo } from './interface'
 
 interface WorkerData {
   scannerModule: TrackModule[]
@@ -11,15 +11,13 @@ interface WorkerData {
   internalThread: boolean
 }
 
-type DependenciesGraph = Record<string, string[]>
-
 function createWorkerThreads(scannerModule: TrackModule[]) {
   const { port1: mainPort, port2: workerPort } = new worker_threads.MessageChannel()
 
   const worker = new worker_threads.Worker(__filename, {
     workerData: { workerPort, internalThread: true, scannerModule },
     transferList: [workerPort],
-    execArgv: [],
+    execArgv: []
   })
   // record thread id
   const id = 0
@@ -28,27 +26,24 @@ function createWorkerThreads(scannerModule: TrackModule[]) {
     return new Promise((resolve, reject) => {
       mainPort.on('message', (message) => {
         if (message.id !== id) reject(new Error(`Internal error: Expected id ${id} but got id ${message.id}`))
-        resolve({ bindings: message.bindings, dependenciesGraph: message.dependenciesGraph })
+        resolve(message.bindings)
         worker.terminate()
       })
     })
   }
-  return run() as Promise<{
-    bindings: Record<string, IIFEModuleInfo>
-    dependenciesGraph: DependenciesGraph
-  }>
+  return run() as Promise<Record<string, ModuleInfo>>
 }
 
 async function tryResolveModule(
   module: TrackModule,
-  vm: ReturnType<typeof createVM>,
-  dependenciesGraph: DependenciesGraph,
+  dependenciesMap:Map<string, ModuleInfo>
 ) {
   const { name: moduleName, ...rest } = module
 
   const packageJson: IIFEModuleInfo & { browser: string } = Object.create(null)
   let packageJsonPath = ''
   try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
     Object.assign(packageJson, require(`${moduleName}/package.json`))
     packageJsonPath = require.resolve(`${moduleName}/package.json`)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -63,26 +58,17 @@ async function tryResolveModule(
       throw new Error('Internal error:' + error)
     }
   }
-  // // https://docs.npmjs.com/cli/v9/configuring-npm/package-json#browser
+  // https://docs.npmjs.com/cli/v9/configuring-npm/package-json#browser
   const { version, name, unpkg, jsdelivr, browser } = packageJson
+  // if user prvoide the global name . Skip eval script
   if (rest.global) {
-    vm.bindings[name] = {
-      name: name,
-      version,
-      unpkg,
-      jsdelivr,
-      ...rest,
-    }
-    // if user prvoide the global name . Skip eval script
+    dependenciesMap.set(name, { name, version, unpkg, jsdelivr, bindings: new Set(), ...rest  })
   } else {
     const iifeRelativePath = typeof browser === 'string' ? browser : jsdelivr ?? unpkg
     if (!iifeRelativePath) return
     const iifeFilePath = lookup(packageJsonPath, iifeRelativePath)
     const code = await fsp.readFile(iifeFilePath, 'utf8')
-    vm.run(code, { version, name, unpkg, jsdelivr, ...rest }, (info) => {
-      if (!info.unpkg && !info.jsdelivr) return null
-      return info
-    })
+    dependenciesMap.set(name, { name, version, unpkg, jsdelivr, code, bindings: new Set(), ...rest })
   }
   const pkg = await import(moduleName)
   const keys = Object.keys(pkg)
@@ -91,7 +77,9 @@ async function tryResolveModule(
     keys.splice(pos, 1)
     keys.push(...Object.keys(pkg.default))
   }
-  dependenciesGraph[name] = uniq(keys.sort())
+  if (dependenciesMap.has(name)) {
+    dependenciesMap.get(name).bindings = new Set(keys)
+  }
 }
 
 function startAsyncThreads() {
@@ -99,7 +87,7 @@ function startAsyncThreads() {
   const { workerPort, scannerModule } = worker_threads.workerData as WorkerData
   const { parentPort } = worker_threads
   const vm = createVM()
-  const dependenciesGraph: DependenciesGraph = Object.create(null)
+  const dependenciesMap: Map<string, ModuleInfo> = new Map()
   parentPort?.on('message', (msg) => {
     (async () => {
       const { id } = msg
@@ -110,10 +98,26 @@ function startAsyncThreads() {
       try {
         const queue = createConcurrentQueue(MAX_CONCURRENT)
         for (const module of scannerModule) {
-          queue.enqueue(() => tryResolveModule(module, vm, dependenciesGraph))
+          queue.enqueue(() => tryResolveModule(module, dependenciesMap))
         }
+        // 
         await queue.wait()
-        workerPort.postMessage({ bindings: vm.bindings, id, dependenciesGraph })
+        for (const module of scannerModule) {
+          const { name } = module
+          if (dependenciesMap.has(name)) {
+            const { code, ...rest } =  dependenciesMap.get(name)
+            if (!code) {
+              vm.bindings[name] = rest
+              continue
+            }
+            vm.run(code, rest, (info) => {
+              if (!info.unpkg && !info.jsdelivr) return null
+              return info
+            })
+          }
+        }
+        dependenciesMap.clear()
+        workerPort.postMessage({ bindings: vm.bindings, id  })
       } catch (error) {
         //
       }
@@ -127,17 +131,16 @@ if (worker_threads.workerData?.internalThread) {
 
 class Scanner {
   modules: Array<TrackModule>
-  dependencies: Record<string, IIFEModuleInfo>
-  dependenciesGraph: DependenciesGraph
+  dependencies: Record<string, ModuleInfo>
   constructor(modules: Array<TrackModule | string>) {
     this.modules = this.serialization(modules)
     this.dependencies = {}
   }
+
   public async scanAllDependencies() {
-    const { bindings, dependenciesGraph } = await createWorkerThreads(this.modules)
-    this.dependencies = bindings
-    this.dependenciesGraph = dependenciesGraph
+    this.dependencies = await createWorkerThreads(this.modules)
   }
+
   private serialization(modules: Array<TrackModule | string>) {
     is(Array.isArray(modules), 'vite-plugin-cdn2: option module must be array')
     return uniq(modules)
@@ -147,13 +150,21 @@ class Scanner {
       })
       .filter((v) => v.name)
   }
+
   // ensure the order
   get dependModuleNames() {
     const deps = Object.keys(this.dependencies)
     return this.modules.map((v) => v.name).filter((v) => deps.includes(v))
   }
-  // TODO
-  // Record can't be resolved module.
+
+  get failedModuleNames() {
+    const failedModules:string[] = []
+    this.modules.forEach((module) => {
+      if (module.name in this.dependencies) return
+      failedModules.push(module.name)
+    })
+    return failedModules
+  }
 }
 
 export function createScanner(modules: Array<TrackModule | string>) {

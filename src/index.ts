@@ -2,12 +2,12 @@ import { createFilter } from '@rollup/pluginutils'
 import { createScanner } from './scanner'
 import { createInjectScript } from './inject'
 import { createParse } from './ast'
-import { isSupportThreads } from './shared'
+import { isSupportThreads  } from './shared'
 import type { Plugin, ResolvedBuildOptions, TransformPluginContext } from 'vite'
 import type { CDNPluginOptions } from './interface'
 
 function cdn(opts: CDNPluginOptions = {}): Plugin {
-  const { modules = [], mode = 'auto', include = /\.(mjs|js|ts|vue|jsx|tsx)(\?.*|)$/, exclude } = opts
+  const { modules = [], mode = 'auto', include = /\.(mjs|js|ts|vue|jsx|tsx)(\?.*|)$/, exclude, logLevel = 'warn' } = opts
   const filter = createFilter(include, exclude)
   const scanner = createScanner(modules)
   const parse = createParse()
@@ -20,7 +20,10 @@ function cdn(opts: CDNPluginOptions = {}): Plugin {
       try {
         if (!isSupport) throw new Error(`vite-plugin-cdn2 can't work with nodejs ${version}.`)
         await scanner.scanAllDependencies()
-        parse.injectDependencies(scanner.dependenciesGraph, scanner.dependencies)
+        parse.injectDependencies(scanner.dependencies)
+        if (logLevel === 'warn') {
+          scanner.failedModuleNames.forEach((name) => config.logger.error(`vite-plugin-cdn2: ${name} resolved failed.Please check it.`))
+        }
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
         config.logger.error(error)
@@ -52,7 +55,7 @@ function cdn(opts: CDNPluginOptions = {}): Plugin {
     transformIndexHtml(html) {
       const inject = createInjectScript(scanner.dependencies, scanner.dependModuleNames, mode)
       return inject.inject(html, opts.transform)
-    },
+    }
   }
 }
 

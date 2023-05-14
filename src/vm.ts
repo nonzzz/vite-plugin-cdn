@@ -1,34 +1,55 @@
 import os from 'os'
 import vm from 'vm'
 import { Window } from 'happy-dom'
-import type { IIFEModuleInfo } from './interface'
+import type { ModuleInfo } from './interface'
 
-// v0.4.0
-// I notice using happy-dom as vm context may casue some bug.
-// some modules don't work. Called syntax error.
-// Maybe we can define a replacement env.
-
-// This is a temporary solution.
 export function createVM() {
-  const bindings: Record<string, IIFEModuleInfo> = {}
+  const bindings: Record<string, ModuleInfo> = {}
   const window = new Window()
   const context = Object.create(null)
   vm.createContext(context)
-  const run = (code: string, opt: IIFEModuleInfo, invoke: (info: IIFEModuleInfo) => IIFEModuleInfo | null) => {
-    let failed = false
-    try {
-      window.eval(code)
-    } catch (_) {
-      vm.runInContext(code, context)
-      failed = true
-    }
-    const globalName = failed ? Object.keys(context).pop() : Object.keys(window).pop()
-    if (!globalName) return
-    if (!bindings[opt.name]) {
+  let _opt:ModuleInfo = null
+  let _invoke:(info: ModuleInfo) => ModuleInfo | null
+  let _id = 0
+
+  const updateBindgs = (opt:ModuleInfo, globalName:string, invoke:(info: ModuleInfo) => ModuleInfo | null) => {
+    if (opt && !bindings[opt.name]) {
       const re = invoke({ ...opt, global: globalName })
       if (!re) return
       bindings[opt.name] = re
     }
+  }
+
+  const shadow = new Proxy(window, {
+    set(target, key:string, value, receiver) {
+      updateBindgs(_opt, key, _invoke)
+      Reflect.set(target, key, value, receiver)
+      return true
+    }
+  })
+  const run = (code: string, opt: ModuleInfo, invoke: (info: ModuleInfo) => ModuleInfo | null) => {
+    let id = 0
+    _opt = opt
+    _invoke = invoke
+    try {
+      vm.runInContext(code, context)
+      _id++
+    } catch (_) {
+    // If can't process. 
+      shadow.eval(code)
+      updateBindgs(opt, Object.keys(shadow).pop(), invoke)
+    }
+    id++
+   
+    if (id === _id) {
+      const latest  = Object.keys(context).pop()
+      if (latest) {
+        shadow[latest] = context[latest]
+      }
+      _id--
+    }
+    _opt = null
+    _invoke = null
   }
   return { run, bindings }
 }
@@ -48,10 +69,12 @@ class Queue {
     this.queue = []
     this.running = 0
   }
+
   enqueue(task: () => Promise<void>) {
     this.queue.push(task)
     this.run()
   }
+
   async run() {
     while (this.running < this.maxConcurrent && this.queue.length) {
       const task = this.queue.shift()
@@ -64,6 +87,7 @@ class Queue {
       }
     }
   }
+
   async wait() {
     while (this.running) {
       await new Promise((resolve) => setTimeout(resolve, 0))

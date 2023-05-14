@@ -4,9 +4,9 @@ import { attachScopes } from '@rollup/pluginutils'
 import { parse as esModuleLexer } from 'rs-module-lexer'
 import { len } from './shared'
 import type { AttachedScope } from '@rollup/pluginutils'
-import type { Node as EsNode, ExportNamedDeclaration, ExportAllDeclaration, Identifier } from 'estree'
+import type { Node as EsNode, ExportNamedDeclaration, ExportAllDeclaration, Identifier  } from 'estree'
 import type { TransformPluginContext } from 'vite'
-import type { IIFEModuleInfo } from './interface'
+import type { ModuleInfo } from './interface'
 
 const IMPORT_DECLARATION = 'ImportDeclaration'
 const EXPORT_NAMED_DECLARATION = 'ExportNamedDeclaration'
@@ -57,9 +57,10 @@ class Walker {
     this.context = {
       skip: () => (this.should_skip = true),
       remove: () => (this.should_remove = true),
-      replace: (node) => (this.replacement = node),
+      replace: (node) => (this.replacement = node)
     }
   }
+
   private replace(parent, prop, index, node) {
     if (parent && prop) {
       // eslint-disable-next-line eqeqeq
@@ -70,6 +71,7 @@ class Walker {
       }
     }
   }
+
   private remove(parent, prop, index) {
     if (parent && prop) {
       if (index !== null && index !== undefined) {
@@ -79,11 +81,12 @@ class Walker {
       }
     }
   }
+
   visit(
     node: Node,
     parent: Node | null,
     prop?: string | number | symbol | null | undefined,
-    index?: number | null | undefined,
+    index?: number | null | undefined
   ): Node | null {
     if (node) {
       if (this.enter) {
@@ -234,7 +237,7 @@ function scanNamedExportsAndRewrite(code: string, rollupTransformPluginContext: 
           }
         }
       }
-    },
+    }
   })
   return { exports, code: magicStr.toString() }
 }
@@ -245,14 +248,13 @@ function scanNamedExportsAndRewrite(code: string, rollupTransformPluginContext: 
 function scanForImportsAndExports(
   node: Node,
   magicStr: MagicString,
-  depsGraph: Record<string, string[]>,
-  deps: Record<string, IIFEModuleInfo>,
+  deps: Record<string, ModuleInfo>
 ) {
   const bindings: Map<string, { alias: string }> = new Map()
   if (node.type !== 'Program') return bindings
   for (const n of node.body) {
     switch (n.type) {
-      case 'ImportDeclaration':
+      case 'ImportDeclaration': {
         const ref = n.source.value as string
         if (ref in deps) {
           magicStr.remove(n.start, n.end)
@@ -262,21 +264,22 @@ function scanForImportsAndExports(
             // import * as module from 'module-name'
             if (specifier.type === 'ImportDefaultSpecifier' || specifier.type === 'ImportNamespaceSpecifier') {
               bindings.set(specifier.local.name, {
-                alias: globalName,
+                alias: globalName
               })
             }
             // import { a1, b2 } from 'module-name'
             // import {s as S } from 'module-name'
             if (specifier.type === 'ImportSpecifier') {
               bindings.set(specifier.local.name, {
-                alias: `${globalName}.${specifier.imported.name}`,
+                alias: `${globalName}.${specifier.imported.name}`
               })
             }
           }
         }
         break
+      }
       case 'ExportAllDeclaration':
-        overWriteExportAllDeclaration(n, magicStr, depsGraph, deps)
+        overWriteExportAllDeclaration(n, magicStr,  deps)
         break
       case 'ExportNamedDeclaration':
         if (n.source) overWriteExportNamedDeclaration(n, magicStr, deps)
@@ -295,18 +298,17 @@ function overWriteIdentifier(node: Node, magicStr: MagicString, alias: string) {
 function overWriteExportAllDeclaration(
   node: ExportAllDeclaration,
   magicStr: MagicString,
-  depsGraph: Record<string, string[]>,
-  deps: Record<string, IIFEModuleInfo>,
+  deps: Record<string, ModuleInfo>
 ) {
   const ref = node.source.value as string
-  if (ref in depsGraph) {
-    const dependencies = depsGraph[ref]
+  if (ref in deps) {
+    const { bindings } = deps[ref]
     const { global: globalName } = deps[ref]
     // TODO
     // I can't find a good way to solve the duplicate name problem.
     const writeContent = node.exported
       ? `export const ${node.exported.name} = window.${globalName};`
-      : dependencies.map((dep) => `export const ${dep}= ${globalName}.${dep};`).join('\n')
+      : Array.from(bindings).map((dep) => `export const ${dep}= ${globalName}.${dep};`).join('\n')
     magicStr.overwrite(node.start, node.end, writeContent, { contentOnly: true })
   }
 }
@@ -316,7 +318,7 @@ function overWriteExportAllDeclaration(
 function overWriteExportNamedDeclaration(
   node: ExportNamedDeclaration,
   magicStr: MagicString,
-  deps: Record<string, IIFEModuleInfo>,
+  deps: Record<string, ModuleInfo>
 ) {
   const ref = node.source.value as string
   const bindings: Record<string, string> = {}
@@ -325,10 +327,10 @@ function overWriteExportNamedDeclaration(
     for (const specifier of node.specifiers) {
       if (specifier.local.name) {
         if (specifier.local.name === 'default') {
-          bindings['__inject__export__default__'] = globalName
+          bindings.__inject__export__default__ = globalName
         } else {
           if (specifier.exported.name === 'default') {
-            bindings['__inject__export__default__'] = `${globalName}.${specifier.local.name}`
+            bindings.__inject__export__default__ = `${globalName}.${specifier.local.name}`
           } else {
             bindings[specifier.local.name] = `${globalName}.${specifier.local.name}`
           }
@@ -354,23 +356,23 @@ function overWriteExportNamedDeclaration(
 // rs-module-lexer only prcoess js file.
 
 export class Parse {
-  private dependencies: Record<string, IIFEModuleInfo>
-  private dependenciesGraph: Record<string, string[]>
+  private dependencies: Record<string, ModuleInfo>
   constructor() {
     this.dependencies = {}
   }
-  injectDependencies(dependenciesGraph: Record<string, string[]>, dependencies: Record<string, IIFEModuleInfo>) {
+
+  injectDependencies(dependencies: Record<string, ModuleInfo>) {
     this.dependencies = dependencies
-    this.dependenciesGraph = dependenciesGraph
   }
+
   filter(code: string, id: string) {
     const { output } = esModuleLexer({
       input: [
         {
           filename: id,
-          code,
-        },
-      ],
+          code
+        }
+      ]
     })
 
     if (!len(output)) return false
@@ -383,20 +385,21 @@ export class Parse {
     }
     return false
   }
+
   overWrite(code: string, rollupTransformPluginContext: TransformPluginContext) {
     const { exports, code: serialzedCode } = scanNamedExportsAndRewrite(code, rollupTransformPluginContext)
     const ast = rollupTransformPluginContext.parse(serialzedCode) as Node
     const magicStr = new MagicString(serialzedCode)
-    const bindings = scanForImportsAndExports(ast, magicStr, this.dependenciesGraph, this.dependencies)
+    const bindings = scanForImportsAndExports(ast, magicStr,  this.dependencies)
     // We get all dependencies grpah in scanner stage.
     // According dependencies graph we can infer the referernce.
     let scope = attachScopes(ast, 'scope')
     walk(ast as Node, {
       enter(node, parent) {
         if (
-          node.type === IMPORT_DECLARATION
-          || node.type === EXPORT_ALL_DECLARATION
-          || node.type === EXPORT_NAMED_DECLARATION
+          node.type === IMPORT_DECLARATION ||
+          node.type === EXPORT_ALL_DECLARATION ||
+          node.type === EXPORT_NAMED_DECLARATION
         ) {
           this.skip()
           return
@@ -420,7 +423,7 @@ export class Parse {
         if (node.scope) {
           scope = node.scope.parent
         }
-      },
+      }
     })
     if (len(exports)) {
       magicStr.append(`export { ${exports.join(' , ')} }`)

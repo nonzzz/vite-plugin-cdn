@@ -9,8 +9,8 @@ test('inject mode auto', (t) => {
       name: 'fake',
       jsdelivr: undefined,
       unpkg: 'fake.js',
-      version: '0.0.0',
-    },
+      version: '0.0.0'
+    }
   }
   const inject = createInjectScript(modules, Object.keys(modules), 'auto')
   t.is(inject.toTags()[0], '<script src="https://unpkg.com/fake@0.0.0/fake.js"></script>')
@@ -22,8 +22,8 @@ test('inject mode jsdelivr', (t) => {
       name: 'fake',
       jsdelivr: 'fake.js',
       unpkg: 'fake.js',
-      version: '0.0.0',
-    },
+      version: '0.0.0'
+    }
   }
   const inject = createInjectScript(modules, Object.keys(modules), 'jsdelivr')
   t.is(inject.toTags()[0], '<script src="https://cdn.jsdelivr.net/npm/fake@0.0.0/fake.js"></script>')
@@ -35,8 +35,8 @@ test('inject mode unpkg', (t) => {
       name: 'fake',
       jsdelivr: 'fake.js',
       unpkg: 'fake.js',
-      version: '0.0.0',
-    },
+      version: '0.0.0'
+    }
   }
   const inject = createInjectScript(modules, Object.keys(modules), 'unpkg')
   t.is(inject.toTags()[0], '<script src="https://unpkg.com/fake@0.0.0/fake.js"></script>')
@@ -48,15 +48,15 @@ test('inject with spare', (t) => {
       name: 'fake',
       jsdelivr: 'fake.js',
       unpkg: 'fake.js',
-      version: '0.0.0',
+      version: '0.0.0'
     },
     fakeUI: {
       name: 'fakeUI',
       jsdelivr: 'ui.js',
       unpkg: 'ui.js',
       spare: ['ui.css', 'theme.css', 'ui2.js'],
-      version: '1.0.0',
-    },
+      version: '1.0.0'
+    }
   }
   const inject = createInjectScript(modules, Object.keys(modules), 'auto')
   t.is(len(inject.toTags()), 5)
