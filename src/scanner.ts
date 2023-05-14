@@ -11,6 +11,14 @@ interface WorkerData {
   internalThread: boolean
 }
 
+interface Dependencies extends TrackModule{
+  name:string
+  version:string
+  unpkg?:string
+  jsdelivr?:string
+  code?:string
+}
+
 type DependenciesGraph = Record<string, string[]>
 
 function createWorkerThreads(scannerModule: TrackModule[]) {
@@ -41,7 +49,7 @@ function createWorkerThreads(scannerModule: TrackModule[]) {
 
 async function tryResolveModule(
   module: TrackModule,
-  vm: ReturnType<typeof createVM>,
+  dependenciesMap:Map<string, Dependencies>,
   dependenciesGraph: DependenciesGraph
 ) {
   const { name: moduleName, ...rest } = module
@@ -67,23 +75,14 @@ async function tryResolveModule(
   // // https://docs.npmjs.com/cli/v9/configuring-npm/package-json#browser
   const { version, name, unpkg, jsdelivr, browser } = packageJson
   if (rest.global) {
-    vm.bindings[name] = {
-      name,
-      version,
-      unpkg,
-      jsdelivr,
-      ...rest
-    }
+    dependenciesMap.set(name, { name, version, unpkg, jsdelivr, ...rest })
     // if user prvoide the global name . Skip eval script
   } else {
     const iifeRelativePath = typeof browser === 'string' ? browser : jsdelivr ?? unpkg
     if (!iifeRelativePath) return
     const iifeFilePath = lookup(packageJsonPath, iifeRelativePath)
     const code = await fsp.readFile(iifeFilePath, 'utf8')
-    vm.run(code, { version, name, unpkg, jsdelivr, ...rest }, (info) => {
-      if (!info.unpkg && !info.jsdelivr) return null
-      return info
-    })
+    dependenciesMap.set(name, { name, version, unpkg, jsdelivr, code, ...rest })
   }
   const pkg = await import(moduleName)
   const keys = Object.keys(pkg)
@@ -101,6 +100,7 @@ function startAsyncThreads() {
   const { parentPort } = worker_threads
   const vm = createVM()
   const dependenciesGraph: DependenciesGraph = Object.create(null)
+  const dependenciesMap: Map<string, Dependencies> = new Map()
   parentPort?.on('message', (msg) => {
     (async () => {
       const { id } = msg
@@ -111,9 +111,25 @@ function startAsyncThreads() {
       try {
         const queue = createConcurrentQueue(MAX_CONCURRENT)
         for (const module of scannerModule) {
-          queue.enqueue(() => tryResolveModule(module, vm, dependenciesGraph))
+          queue.enqueue(() => tryResolveModule(module, dependenciesMap, dependenciesGraph))
         }
+        // 
         await queue.wait()
+        for (const module of scannerModule) {
+          const { name } = module
+          if (dependenciesMap.has(name)) {
+            const { code, ...rest } =  dependenciesMap.get(name)
+            if (!code) {
+              vm.bindings[name] = rest
+              continue
+            }
+            vm.run(code, rest, (info) => {
+              if (!info.unpkg && !info.jsdelivr) return null
+              return info
+            })
+          }
+        }
+        dependenciesMap.clear()
         workerPort.postMessage({ bindings: vm.bindings, id, dependenciesGraph })
       } catch (error) {
         //

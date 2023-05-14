@@ -10,26 +10,56 @@ import type { IIFEModuleInfo } from './interface'
 
 // This is a temporary solution.
 
+// I think we can use vm as first. Then pipe the result to happy dom context
+
+
 export function createVM() {
   const bindings: Record<string, IIFEModuleInfo> = {}
   const window = new Window()
   const context = Object.create(null)
   vm.createContext(context)
-  const run = (code: string, opt: IIFEModuleInfo, invoke: (info: IIFEModuleInfo) => IIFEModuleInfo | null) => {
-    let failed = false
-    try {
-      window.eval(code)
-    } catch (_) {
-      vm.runInContext(code, context)
-      failed = true
-    }
-    const globalName = failed ? Object.keys(context).pop() : Object.keys(window).pop()
-    if (!globalName) return
-    if (!bindings[opt.name]) {
+  let _opt:IIFEModuleInfo = null
+  let _invoke:(info: IIFEModuleInfo) => IIFEModuleInfo | null
+  let _id = 0
+
+  const updateBindgs = (opt:IIFEModuleInfo, globalName:string, invoke:(info: IIFEModuleInfo) => IIFEModuleInfo | null) => {
+    if (opt && !bindings[opt.name]) {
       const re = invoke({ ...opt, global: globalName })
       if (!re) return
       bindings[opt.name] = re
     }
+  }
+
+  const shadow = new Proxy(window, {
+    set(target, key:string, value, receiver) {
+      updateBindgs(_opt, key, _invoke)
+      Reflect.set(target, key, value, receiver)
+      return true
+    }
+  })
+  const run = (code: string, opt: IIFEModuleInfo, invoke: (info: IIFEModuleInfo) => IIFEModuleInfo | null) => {
+    let id = 0
+    _opt = opt
+    _invoke = invoke
+    try {
+      vm.runInContext(code, context)
+      _id++
+    } catch (_) {
+    // If can't process. 
+      shadow.eval(code)
+      updateBindgs(opt, Object.keys(shadow).pop(), invoke)
+    }
+    id++
+   
+    if (id === _id) {
+      const latest  = Object.keys(context).pop()
+      if (latest) {
+        shadow[latest] = context[latest]
+      }
+      _id--
+    }
+    _opt = null
+    _invoke = null
   }
   return { run, bindings }
 }
