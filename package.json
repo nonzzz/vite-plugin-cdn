@@ -1,6 +1,6 @@
 {
   "name": "vite-plugin-cdn2",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "description": "A Vite plugin that allowed you replace module with CDN",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -10,8 +10,7 @@
     "test": "ava __tests__/*.spec.ts",
     "lint": "eslint . --fix",
     "dev": "bump -w",
-    "coverage": "c8 -r=lcov ava",
-    "prepare:e2e": "cd e2e && npm run installer"
+    "coverage": "c8 -r=lcov ava"
   },
   "keywords": [
     "vite",
