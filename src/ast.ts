@@ -208,7 +208,7 @@ function isReference(node: Node, parent: Node) {
 }
 
 function scanNamedExportsAndRewrite(code: string, rollupTransformPluginContext: TransformPluginContext) {
-  const exports = []
+  const exports:string[] = []
   const ast = rollupTransformPluginContext.parse(code) as Node
   const magicStr = new MagicString(code)
   walk(ast, {
@@ -302,12 +302,9 @@ function overWriteExportAllDeclaration(
 ) {
   const ref = node.source.value as string
   if (ref in deps) {
-    const { bindings } = deps[ref]
-    const { global: globalName } = deps[ref]
-    // TODO
-    // I can't find a good way to solve the duplicate name problem.
+    const { bindings, global: globalName } = deps[ref]
     const writeContent = node.exported
-      ? `export const ${node.exported.name} = window.${globalName};`
+      ? `export const ${node.exported.name} = { ${Array.from(bindings).map(dep => `${dep}: ${globalName}.${dep}`)} };`
       : Array.from(bindings).map((dep) => `export const ${dep}= ${globalName}.${dep};`).join('\n')
     magicStr.overwrite(node.start, node.end, writeContent, { contentOnly: true })
   }
@@ -386,11 +383,14 @@ export class Parse {
     return false
   }
 
+  // We should implement a mini module parser that record 
+  // export * from 'module'
+  // export const { version } from 'anothr-module'
   overWrite(code: string, rollupTransformPluginContext: TransformPluginContext) {
     const { exports, code: serialzedCode } = scanNamedExportsAndRewrite(code, rollupTransformPluginContext)
     const ast = rollupTransformPluginContext.parse(serialzedCode) as Node
     const magicStr = new MagicString(serialzedCode)
-    const bindings = scanForImportsAndExports(ast, magicStr,  this.dependencies)
+    const bindings = scanForImportsAndExports(ast, magicStr, this.dependencies)
     // We get all dependencies grpah in scanner stage.
     // According dependencies graph we can infer the referernce.
     let scope = attachScopes(ast, 'scope')
