@@ -2,7 +2,6 @@ import { createFilter } from '@rollup/pluginutils'
 import { createScanner } from './scanner'
 import { createInjectScript } from './inject'
 import { createGenerator } from './generator'
-// import { createParse } from './ast'
 import { isSupportThreads  } from './shared'
 import type { Plugin, ResolvedBuildOptions  } from 'vite'
 import type { CDNPluginOptions } from './interface'
@@ -11,7 +10,6 @@ function cdn(opts: CDNPluginOptions = {}): Plugin {
   const { modules = [], mode = 'auto', include = /\.(mjs|js|ts|vue|jsx|tsx)(\?.*|)$/, exclude, logLevel = 'warn' } = opts
   const filter = createFilter(include, exclude)
   const scanner = createScanner(modules)
-  // const parse = createParse()
   const generator = createGenerator()
   return {
     name: 'vite-plugin-cdn',

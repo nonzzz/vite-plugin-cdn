@@ -24,9 +24,9 @@ export async function mockBuild(dir: string, pluginOptions: CDNPluginOptions = {
   return id
 }
 
-// test.after(async () => {
-//   await fsp.rm(dist, { recursive: true })
-// })
+test.after(async () => {
+  await fsp.rm(dist, { recursive: true })
+})
 
 test('plugin importer case', async (t) => {
   await mockBuild('importer', { modules: ['vue'] })

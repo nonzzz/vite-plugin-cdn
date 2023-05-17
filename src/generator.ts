@@ -16,6 +16,9 @@ import type { ExportAllDeclaration, ExportNamedDeclaration, Identifier, ImportDe
 import type { WalkerContext } from './ast'
 import type{ RollupTransformHookContext, ModuleInfo } from './interface'
 
+
+const PLUGIN_GLOBAL_NAME = '__vite__plugin__cdn2__global__'
+
 class Generator {
   private dependencies: Record<string, ModuleInfo>
   constructor() {
@@ -54,46 +57,45 @@ class Generator {
 
   // erase all export keywords without 'source' type and remove duplicate declarations
   private overwriteAllNamedDeclaration(node:ExportNamedDeclaration, program:Program, walkContext:WalkerContext, exports:string[]) {
-    if (node.source) {
-      // export { default as A } from 'module-name'
-      // export { B as default } from 'module-name'
-      const ref = node.source.value 
-      if (typeof ref !== 'string') return
-      if (ref in this.dependencies) {
-        const { global } = this.dependencies[ref]
-        for (const specifier of node.specifiers) {
-          if (specifier.local.name) {
-            if (specifier.local.name === 'default') {
-              // 
-            }
-          }
-          // import module from 'module-name'
-          // import * as module from 'module-name'
-          // if (specifier.type === 'ImportDefaultSpecifier' || specifier.type === 'ImportNamespaceSpecifier') {
-          //   bindings.set(specifier.local.name, global)
-          // }
-          // import { a1, b2 } from 'module-name'
-          // import {s as S } from 'module-name'
-          // if (specifier.type === 'ImportSpecifier') {
-          //   bindings.set(specifier.local.name,  `${global}.${specifier.imported.name}`)
-          // }
-        }
-      }
-
-      return
-    }
+    if (node.source) return
     if (node.declaration) {
       const name = node.declaration.type === 'VariableDeclaration' ? (node.declaration.declarations[0].id as Identifier).name : node.declaration.id.name
-      // const exportsWithSource =  program.body.filter(n => n.type === 'ExportNamedDeclaration' && n.source)
-      // specifier 
-      // for (const exports of exportsWithSource) {
-      //   for (const specifier in specifier) {
-      //     // 
-      //   }
-      // }
       walkContext.replace(node.declaration)
-      // program.body.push(name)
       exports.push(name)
+    }
+  }
+
+  private overwriteAllNamedExportsWithSource(node:ExportNamedDeclaration, program:Program, walkContext:WalkerContext, rollupTransformHookContext:RollupTransformHookContext) {
+    const ref = node.source.value as string
+    if (ref in this.dependencies) {
+      const { global, bindings } =  this.dependencies[ref]
+      const exports = []
+      const writeContent:string[] = []
+      for (const specifier of node.specifiers) {
+        // export { default as A } from 'module-name'
+        // export { B as default } from 'module-name'
+        if (specifier.exported.name === 'default') {
+          if (specifier.local.name === 'default') {
+            const code = `const ${PLUGIN_GLOBAL_NAME} = { ${Array.from(bindings).map(dep => `${dep}: ${global}.${dep}`)} };\n export default ${PLUGIN_GLOBAL_NAME};\n`
+            const [n1, n2] =  (rollupTransformHookContext.parse(code) as Node as Program).body
+            program.body.push(n1, n2)
+          } else {
+            const code  = `const ${PLUGIN_GLOBAL_NAME} = ${global}.${specifier.local.name};\n export default ${PLUGIN_GLOBAL_NAME};\n`
+            const [n1, n2] =  (rollupTransformHookContext.parse(code) as Node as Program).body
+            program.body.push(n1, n2)
+          }
+        } else {
+          exports.push(specifier.exported.name)
+        }
+      }
+      if (len(exports)) {
+        writeContent.push(`const { ${exports.map(module => module)} } = ${global};\n`, `export {${exports.map(module => module)} }`)
+        if (len(writeContent)) {
+          const [n1, n2] = (rollupTransformHookContext.parse(writeContent.join('\n'))as Node as Program).body
+          program.body.push(n1, n2)
+        }
+      }
+      walkContext.remove()
     }
   }
 
@@ -131,6 +133,11 @@ class Generator {
             this.skip()
             break
           case 'ExportNamedDeclaration':
+            if (node.source) {
+              ctx.overwriteAllNamedExportsWithSource(node, parent as Program, this, rollupTransformHookContext)
+              this.skip()
+              break
+            }
             ctx.overwriteAllNamedDeclaration(node, parent as Program, this, exports)
             this.skip()
             break
@@ -145,7 +152,7 @@ class Generator {
     let scope = attachScopes(ast, 'scope')
     walk(ast, {
       enter(node, parent) {
-        if (node.type === 'ExportAllDeclaration' || node.type === 'ExportNamedDeclaration') {
+        if (node.type === 'ExportAllDeclaration') {
           this.skip()
         }
         if (node.scope) {
@@ -163,9 +170,14 @@ class Generator {
           }
         }
       },
-      leave(node) {
+      leave(node, parent) {
         if (node.scope) {
           scope = node.scope.parent
+        } 
+        if (node.type === 'ExportNamedDeclaration') {
+          if (node.source) {
+            ctx.overwriteAllNamedExportsWithSource(node, parent as Program, this, rollupTransformHookContext)
+          }
         }
         if (node.type === 'ImportDeclaration') {
           const ref = node.source.value
