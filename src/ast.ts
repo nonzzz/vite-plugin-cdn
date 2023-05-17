@@ -6,6 +6,11 @@ export type Node = EsNode & {
   scope?: AttachedScope
 }
 
+export interface LocRange {
+  start:number
+}
+
+
 // es-walker is implement from https://github.com/Rich-Harris/estree-walker
 // MIT LICENSE
 
