@@ -5,8 +5,7 @@ import { parse as esModuleLexer } from 'rs-module-lexer'
 import { len } from './shared'
 import type { AttachedScope } from '@rollup/pluginutils'
 import type { Node as EsNode, ExportNamedDeclaration, ExportAllDeclaration, Identifier  } from 'estree'
-import type { TransformPluginContext } from 'vite'
-import type { ModuleInfo } from './interface'
+import type { ModuleInfo, RollupTransformHookContext } from './interface'
 
 const IMPORT_DECLARATION = 'ImportDeclaration'
 const EXPORT_NAMED_DECLARATION = 'ExportNamedDeclaration'
@@ -19,7 +18,7 @@ type Node = EsNode & {
 // es-walker is implement from https://github.com/Rich-Harris/estree-walker
 // MIT LICENSE
 
-interface WalkerContext {
+export interface WalkerContext {
   skip: () => void
   remove: () => void
   replace: (node: Node) => void
@@ -172,14 +171,14 @@ class Walker {
   }
 }
 
-function walk(ast: Node, handle: WalkOptions) {
+export function walk(ast: Node, handle: WalkOptions) {
   const instance = new Walker(handle)
   return instance.visit(ast, null)
 }
 
 // isReference is implement from  https://github.com/Rich-Harris/is-reference
 // MIT LICENSE
-function isReference(node: Node, parent: Node) {
+export function isReference(node: Node, parent: Node) {
   if (node.type === 'MemberExpression') {
     return !node.computed && isReference(node.object, node)
   }
@@ -207,9 +206,9 @@ function isReference(node: Node, parent: Node) {
   }
 }
 
-function scanNamedExportsAndRewrite(code: string, rollupTransformPluginContext: TransformPluginContext) {
+function scanNamedExportsAndRewrite(code: string, rollupTransformHookContext: RollupTransformHookContext) {
   const exports:string[] = []
-  const ast = rollupTransformPluginContext.parse(code) as Node
+  const ast = rollupTransformHookContext.parse(code) as Node
   const magicStr = new MagicString(code)
   walk(ast, {
     enter(node) {
@@ -386,9 +385,9 @@ export class Parse {
   // We should implement a mini module parser that record 
   // export * from 'module'
   // export const { version } from 'anothr-module'
-  overWrite(code: string, rollupTransformPluginContext: TransformPluginContext) {
-    const { exports, code: serialzedCode } = scanNamedExportsAndRewrite(code, rollupTransformPluginContext)
-    const ast = rollupTransformPluginContext.parse(serialzedCode) as Node
+  overWrite(code: string, rollupTransformHookContext: RollupTransformHookContext) {
+    const { exports, code: serialzedCode } = scanNamedExportsAndRewrite(code, rollupTransformHookContext)
+    const ast = rollupTransformHookContext.parse(serialzedCode) as Node
     const magicStr = new MagicString(serialzedCode)
     const bindings = scanForImportsAndExports(ast, magicStr, this.dependencies)
     // We get all dependencies grpah in scanner stage.

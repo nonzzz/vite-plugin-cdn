@@ -1,16 +1,18 @@
 import { createFilter } from '@rollup/pluginutils'
 import { createScanner } from './scanner'
 import { createInjectScript } from './inject'
-import { createParse } from './ast'
+import { createGenerator } from './generator'
+// import { createParse } from './ast'
 import { isSupportThreads  } from './shared'
-import type { Plugin, ResolvedBuildOptions, TransformPluginContext } from 'vite'
+import type { Plugin, ResolvedBuildOptions  } from 'vite'
 import type { CDNPluginOptions } from './interface'
 
 function cdn(opts: CDNPluginOptions = {}): Plugin {
   const { modules = [], mode = 'auto', include = /\.(mjs|js|ts|vue|jsx|tsx)(\?.*|)$/, exclude, logLevel = 'warn' } = opts
   const filter = createFilter(include, exclude)
   const scanner = createScanner(modules)
-  const parse = createParse()
+  // const parse = createParse()
+  const generator = createGenerator()
   return {
     name: 'vite-plugin-cdn',
     enforce: 'post',
@@ -20,7 +22,7 @@ function cdn(opts: CDNPluginOptions = {}): Plugin {
       try {
         if (!isSupport) throw new Error(`vite-plugin-cdn2 can't work with nodejs ${version}.`)
         await scanner.scanAllDependencies()
-        parse.injectDependencies(scanner.dependencies)
+        generator.injectDependencies(scanner.dependencies)
         if (logLevel === 'warn') {
           scanner.failedModuleNames.forEach((name) => config.logger.error(`vite-plugin-cdn2: ${name} resolved failed.Please check it.`))
         }
@@ -49,8 +51,8 @@ function cdn(opts: CDNPluginOptions = {}): Plugin {
     },
     async transform(code, id) {
       if (!filter(id)) return
-      if (!parse.filter(code, id)) return
-      return parse.overWrite(code, this as unknown as TransformPluginContext)
+      if (!generator.filter(code, id)) return
+      return generator.overwrite(code, this)
     },
     transformIndexHtml(html) {
       const inject = createInjectScript(scanner.dependencies, scanner.dependModuleNames, mode)
