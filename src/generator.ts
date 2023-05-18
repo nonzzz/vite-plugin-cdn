@@ -11,6 +11,7 @@ import type{ RollupTransformHookContext, ModuleInfo } from './interface'
 
 const PLUGIN_GLOBAL_NAME = '__vite__plugin__cdn2__global__'
 
+
 class Generator {
   private dependencies: Record<string, ModuleInfo>
   constructor() {
@@ -34,7 +35,13 @@ class Generator {
   }
 
   // overwrite all exprot declaration 
-  private overwriteAllExportDeclaration(node:ExportAllDeclaration, walkContext:WalkerContext, rollupTransformHookContext:RollupTransformHookContext) {
+  //  walkContext:WalkerContext,
+  private overwriteAllExportDeclaration(node:ExportAllDeclaration, options:{
+    rollupTransformHookContext: RollupTransformHookContext,
+    parent: Program,
+    pos:number
+  }) {
+    const { rollupTransformHookContext, parent, pos } = options
     const ref = node.source.value
     if (typeof ref !== 'string') return
     if (ref in this.dependencies) {
@@ -42,18 +49,20 @@ class Generator {
       const code = node.exported
         ?  `export const ${node.exported.name} = { ${Array.from(bindings).map(dep => `${dep}: ${global}.${dep}`)} };\n`
         : `export {${Array.from(bindings).map(dep => dep)} } from '${ref}';\n`
-      const newNode = (rollupTransformHookContext.parse(code) as Node as Program).body[0]
-      walkContext.replace(newNode)
+      const newNode = (rollupTransformHookContext.parse(code) as Node as Program).body[0] 
+      parent.body[pos] = newNode
     }
   }
 
   // erase all export keywords without 'source' type and remove duplicate declarations
-  private EraseExportKeyword(node:ExportNamedDeclaration, walkContext:WalkerContext, exports:Map<string, LocRange>) {
+  private eraseExportKeyword(node:ExportNamedDeclaration, options:{exports:Map<string, LocRange>, parent:Program, pos:number}) {
     if (node.source) return
     if (node.declaration) {
+      const { exports, parent, pos } = options
       const name = node.declaration.type === 'VariableDeclaration' ? (node.declaration.declarations[0].id as Identifier).name : node.declaration.id.name
-      walkContext.replace(node.declaration)
       exports.set(name, { start: node.start })
+      // node = node.declaration as any
+      parent.body[pos] = node.declaration
     }
   }
 
@@ -130,25 +139,23 @@ class Generator {
     // -  overwrite exports. to export { x, z, y } from 'module'
     // -  erase named exports
 
-    walk(ast, {
-      enter(node) {
-        switch (node.type) {
-          case 'ExportAllDeclaration':
-            ctx.overwriteAllExportDeclaration(node, this, rollupTransformHookContext)
-            this.skip()
-            break
-          case 'ExportNamedDeclaration':
-            ctx.EraseExportKeyword(node,  this, exports)
-            this.skip()
-            break
-          case 'ImportDeclaration':
-            ctx.scanForImportAndRecord(node, bindings)
-            this.skip()
-            break
-        }
-      }
-    })
+    // I decide don't support dynamic import case
 
+    if (ast.type === 'Program') {
+      const program = ast
+      program.body.forEach((node, pos) => {
+        switch (node.type) {
+          case 'ImportDeclaration':
+            this.scanForImportAndRecord(node, bindings)
+            return
+          case 'ExportAllDeclaration':
+            this.overwriteAllExportDeclaration(node, { rollupTransformHookContext, parent: program, pos })
+            return
+          case 'ExportNamedDeclaration':
+            this.eraseExportKeyword(node, { exports, parent: program, pos })
+        }
+      })
+    }
     // handle reference and rewrite identifier
     // remove importer node
     // overwrite named exports
@@ -199,7 +206,6 @@ class Generator {
     if (exports.size) {
       magicStr.append(`export { ${[...exports.keys()].join(' , ')} }`)
     }
-    console.log(magicStr.toString())
     return { code: magicStr.toString(), map: magicStr.generateMap() }
   }
 }
