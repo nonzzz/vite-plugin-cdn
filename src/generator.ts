@@ -4,13 +4,12 @@ import MagicString from 'magic-string'
 import { attachScopes } from '@rollup/pluginutils'
 import { len } from './shared'
 import { walk, isReference, LocRange } from './ast'
-import type { ExportAllDeclaration, ExportNamedDeclaration, Identifier, ImportDeclaration, Node, Program } from 'estree'
+import type { ExportAllDeclaration, ExportNamedDeclaration, ImportDeclaration, Node, Program } from 'estree'
 import type { WalkerContext } from './ast'
 import type{ RollupTransformHookContext, ModuleInfo } from './interface'
 
 
 const PLUGIN_GLOBAL_NAME = '__vite__plugin__cdn2__global__'
-
 
 class Generator {
   private dependencies: Record<string, ModuleInfo>
@@ -45,7 +44,9 @@ class Generator {
     const ref = node.source.value
     if (typeof ref !== 'string') return
     if (ref in this.dependencies) {
-      const { bindings, global } = this.dependencies[ref]
+      const { bindings: _bindings, global } = this.dependencies[ref]
+      const bindings = new Set([..._bindings])
+      bindings.delete('default')
       const code = node.exported
         ?  `export const ${node.exported.name} = { ${Array.from(bindings).map(dep => `${dep}: ${global}.${dep}`)} };\n`
         : `export {${Array.from(bindings).map(dep => dep)} } from '${ref}';\n`
@@ -59,14 +60,22 @@ class Generator {
     if (node.source) return
     if (node.declaration) {
       const { exports, parent, pos } = options
-      const name = node.declaration.type === 'VariableDeclaration' ? (node.declaration.declarations[0].id as Identifier).name : node.declaration.id.name
-      exports.set(name, { start: node.start })
-      // node = node.declaration as any
+      if (node.declaration.type === 'VariableDeclaration') {
+        for (const declaration of node.declaration.declarations) {
+          if (declaration.id.type === 'Identifier') {
+            const { name } = declaration.id
+            exports.set(name, { start: node.start })
+          }
+        }
+      } else {
+        const { name } = node.declaration.id
+        exports.set(name, { start: node.start })
+      }
       parent.body[pos] = node.declaration
     }
   }
 
-  private overwriteAllNamedExportsWithSource(node:ExportNamedDeclaration, program:Program, exportRecords:Map<string, LocRange>, walkContext:WalkerContext, rollupTransformHookContext:RollupTransformHookContext) {
+  private overwriteAllNamedExportsWithSource(node:ExportNamedDeclaration, program:Program, walkContext:WalkerContext, exportsRecord:Map<string, LocRange>, rollupTransformHookContext:RollupTransformHookContext) {
     const ref = node.source.value as string
     if (ref in this.dependencies) {
       const { global, bindings } =  this.dependencies[ref]
@@ -82,6 +91,10 @@ class Generator {
             walkContext.replace(n1)
             program.body.push(n2)
           } else {
+            if (exportsRecord.has(specifier.local.name)) {
+              if (exportsRecord.get(specifier.local.name).start > node.start) continue
+              exportsRecord.delete(specifier.local.name)
+            }
             const code  = `const ${PLUGIN_GLOBAL_NAME} = ${global}.${specifier.local.name};\n export default ${PLUGIN_GLOBAL_NAME};\n`
             const [n1, n2] =  (rollupTransformHookContext.parse(code) as Node as Program).body
             walkContext.replace(n1)
@@ -89,15 +102,14 @@ class Generator {
           }
         } else {
           // export { A, B } from 'module-name'
-          const filed = specifier.exported.name
-          // if (!exportRecords.has(filed)) {
-          //   if (exportRecords.get(filed).start > node.start) return
-          // }
-          exports.push(filed)
+          const field = specifier.exported.name
+          if (exportsRecord.has(field)) {
+            if (exportsRecord.get(field).start > node.start) continue
+          }
+          exports.push(field)
         }
       }
       if (len(exports)) {
-        // console.log(exportRecords)
         writeContent.push(`const { ${exports.map(module => module)} } = ${global};\n`, `export {${exports.map(module => module)} }`)
         if (len(writeContent)) {
           const [n1, n2] = (rollupTransformHookContext.parse(writeContent.join('\n'))as Node as Program).body
@@ -187,7 +199,7 @@ class Generator {
         } 
         if (node.type === 'ExportNamedDeclaration') {
           if (node.source) {
-            ctx.overwriteAllNamedExportsWithSource(node, parent as Program, exports, this, rollupTransformHookContext)
+            ctx.overwriteAllNamedExportsWithSource(node, parent as Program, this, exports, rollupTransformHookContext)
             this.skip()
           }
         }
@@ -200,9 +212,7 @@ class Generator {
         }
       }
     })
-    // analysisExports(ast, exports)
     const magicStr = new MagicString(escodegen.generate(ast))
-    // concat all exports 
     if (exports.size) {
       magicStr.append(`export { ${[...exports.keys()].join(' , ')} }`)
     }
