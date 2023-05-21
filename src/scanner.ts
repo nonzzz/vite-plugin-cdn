@@ -77,8 +77,9 @@ async function tryResolveModule(
     keys.splice(pos, 1)
     keys.push(...Object.keys(pkg.default))
   }
+
   if (dependenciesMap.has(name)) {
-    dependenciesMap.get(name).bindings = new Set(keys)
+    dependenciesMap.get(name).bindings = new Set(keys.filter((k) => k !== '__esModule'))
   }
 }
 

@@ -5,16 +5,18 @@ import Components from 'unplugin-vue-components/vite'
 import { cdn } from 'vite-plugin-cdn2'
 import Inspect from 'vite-plugin-inspect'
 
-export default defineConfig({
-  plugins: [
-    vue(),
-    Components({ resolvers: [VarletUIResolver()] }),
-    {
-      ...cdn({
-        modules: ['vue', 'vue-demi', 'pinia', '@varlet/ui', 'axios']
-      }),
-      apply: 'serve'
-    },
-    Inspect()
-  ]
+export default defineConfig(({ command }) => {
+  return {
+    plugins: [
+      vue(),
+      Components({ resolvers: [VarletUIResolver()] }),
+      {
+        ...cdn({
+          modules: ['vue', 'vue-demi', 'pinia', '@varlet/ui', 'axios']
+        }),
+        apply: command
+      },
+      Inspect()
+    ]
+  }
 })

@@ -70,6 +70,11 @@ Thanks to [JetBrains](https://www.jetbrains.com/) for allocating free open-sourc
 <img width="250px" height="250px" src="https://resources.jetbrains.com/storage/products/company/brand/logos/jb_square.png" alt="JetBrains Black Box Logo logo.">
 </p>
 
+
+### Q & A
+
+see [Architecture](./Architecture.md)
+
 ### LICENSE
 
 [MIT](./LICENSE)

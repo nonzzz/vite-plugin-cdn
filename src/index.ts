@@ -1,16 +1,16 @@
 import { createFilter } from '@rollup/pluginutils'
 import { createScanner } from './scanner'
 import { createInjectScript } from './inject'
-import { createParse } from './ast'
+import { createGenerator } from './generator'
 import { isSupportThreads  } from './shared'
-import type { Plugin, ResolvedBuildOptions, TransformPluginContext } from 'vite'
+import type { Plugin } from 'vite'
 import type { CDNPluginOptions } from './interface'
 
 function cdn(opts: CDNPluginOptions = {}): Plugin {
   const { modules = [], mode = 'auto', include = /\.(mjs|js|ts|vue|jsx|tsx)(\?.*|)$/, exclude, logLevel = 'warn' } = opts
   const filter = createFilter(include, exclude)
   const scanner = createScanner(modules)
-  const parse = createParse()
+  const generator = createGenerator()
   return {
     name: 'vite-plugin-cdn',
     enforce: 'post',
@@ -20,7 +20,7 @@ function cdn(opts: CDNPluginOptions = {}): Plugin {
       try {
         if (!isSupport) throw new Error(`vite-plugin-cdn2 can't work with nodejs ${version}.`)
         await scanner.scanAllDependencies()
-        parse.injectDependencies(scanner.dependencies)
+        generator.injectDependencies(scanner.dependencies)
         if (logLevel === 'warn') {
           scanner.failedModuleNames.forEach((name) => config.logger.error(`vite-plugin-cdn2: ${name} resolved failed.Please check it.`))
         }
@@ -28,29 +28,11 @@ function cdn(opts: CDNPluginOptions = {}): Plugin {
       } catch (error: any) {
         config.logger.error(error)
       }
-      // When we extra module we should set it as external
-      if (!config.build.rollupOptions) {
-        config.build.rollupOptions = {}
-      }
-      if (!('external' in config.build.rollupOptions)) {
-        config.build.rollupOptions.external = []
-      }
-      const { external } = config.build.rollupOptions as Required<ResolvedBuildOptions['rollupOptions']>
-      if (typeof external === 'function') {
-        config.logger.warnOnce('\'rollupOptions.external\' is a function. It\'s may cause not work as expected.')
-        config.build.rollupOptions.external = [...scanner.dependModuleNames]
-        return
-      }
-      if (Array.isArray(external)) {
-        external.push(...scanner.dependModuleNames)
-        return
-      }
-      config.build.rollupOptions.external = [...scanner.dependModuleNames, external]
     },
     async transform(code, id) {
       if (!filter(id)) return
-      if (!parse.filter(code, id)) return
-      return parse.overWrite(code, this as unknown as TransformPluginContext)
+      if (!generator.filter(code, id)) return
+      return generator.overwrite(code, this)
     },
     transformIndexHtml(html) {
       const inject = createInjectScript(scanner.dependencies, scanner.dependModuleNames, mode)

@@ -1,4 +1,16 @@
+import type { Plugin } from 'vite'
 import type { FilterPattern } from '@rollup/pluginutils'
+
+
+// eslint-disable-next-line @typescript-eslint/ban-types
+type ObjectHook<T, O = {}> = T | ({ handler: T; order?: 'pre' | 'post' | null } & O);
+
+
+type HookHandler<T> = T extends ObjectHook<infer H> ? H : T
+
+
+export type RollupTransformHookContext = ThisParameterType<NonNullable<HookHandler<Plugin['transform']>>>
+
 
 export interface TrackModule {
   name: string

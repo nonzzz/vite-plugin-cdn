@@ -1,7 +1,3 @@
-declare module 'vite' {
-  type TransformPluginContext = import('rollup').TransformPluginContext
-}
-
 interface Loc {
   start: number
   end: number
