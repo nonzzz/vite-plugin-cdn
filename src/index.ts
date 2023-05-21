@@ -3,7 +3,7 @@ import { createScanner } from './scanner'
 import { createInjectScript } from './inject'
 import { createGenerator } from './generator'
 import { isSupportThreads  } from './shared'
-import type { Plugin, ResolvedBuildOptions  } from 'vite'
+import type { Plugin } from 'vite'
 import type { CDNPluginOptions } from './interface'
 
 function cdn(opts: CDNPluginOptions = {}): Plugin {
@@ -28,24 +28,6 @@ function cdn(opts: CDNPluginOptions = {}): Plugin {
       } catch (error: any) {
         config.logger.error(error)
       }
-      // When we extra module we should set it as external
-      if (!config.build.rollupOptions) {
-        config.build.rollupOptions = {}
-      }
-      if (!('external' in config.build.rollupOptions)) {
-        config.build.rollupOptions.external = []
-      }
-      const { external } = config.build.rollupOptions as Required<ResolvedBuildOptions['rollupOptions']>
-      if (typeof external === 'function') {
-        config.logger.warnOnce('\'rollupOptions.external\' is a function. It\'s may cause not work as expected.')
-        config.build.rollupOptions.external = [...scanner.dependModuleNames]
-        return
-      }
-      if (Array.isArray(external)) {
-        external.push(...scanner.dependModuleNames)
-        return
-      }
-      config.build.rollupOptions.external = [...scanner.dependModuleNames, external]
     },
     async transform(code, id) {
       if (!filter(id)) return

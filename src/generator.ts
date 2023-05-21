@@ -75,7 +75,7 @@ class Generator {
     }
   }
 
-  private overwriteAllNamedExportsWithSource(node:ExportNamedDeclaration, program:Program, walkContext:WalkerContext, exportsRecord:Map<string, LocRange>, rollupTransformHookContext:RollupTransformHookContext) {
+  private overwriteAllNamedExportsWithSource(node:ExportNamedDeclaration, program:Program, walkContext:WalkerContext, rollupTransformHookContext:RollupTransformHookContext) {
     const ref = node.source.value as string
     if (ref in this.dependencies) {
       const { global, bindings } =  this.dependencies[ref]
@@ -91,10 +91,6 @@ class Generator {
             walkContext.replace(n1)
             program.body.push(n2)
           } else {
-            if (exportsRecord.has(specifier.local.name)) {
-              if (exportsRecord.get(specifier.local.name).start > node.start) continue
-              exportsRecord.delete(specifier.local.name)
-            }
             const code  = `const ${PLUGIN_GLOBAL_NAME} = ${global}.${specifier.local.name};\n export default ${PLUGIN_GLOBAL_NAME};\n`
             const [n1, n2] =  (rollupTransformHookContext.parse(code) as Node as Program).body
             walkContext.replace(n1)
@@ -103,9 +99,6 @@ class Generator {
         } else {
           // export { A, B } from 'module-name'
           const field = specifier.exported.name
-          if (exportsRecord.has(field)) {
-            if (exportsRecord.get(field).start > node.start) continue
-          }
           exports.push(field)
         }
       }
@@ -199,7 +192,7 @@ class Generator {
         } 
         if (node.type === 'ExportNamedDeclaration') {
           if (node.source) {
-            ctx.overwriteAllNamedExportsWithSource(node, parent as Program, this, exports, rollupTransformHookContext)
+            ctx.overwriteAllNamedExportsWithSource(node, parent as Program, this, rollupTransformHookContext)
             this.skip()
           }
         }
