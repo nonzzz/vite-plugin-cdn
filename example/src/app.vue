@@ -10,14 +10,19 @@
 </template>
 
 <script>
-import { defineComponent, ref } from 'vue'
+import { defineComponent } from 'vue'
 import axios from 'axios'
 import { useCounterStore } from './counter'
+import ref, { onMounted } from './api'
 
 export default defineComponent({
   setup() {
     const mock = ref({ title: 'Init Titlte' })
     const counter = useCounterStore()
+
+    onMounted(() => {
+      console.log('hello world')
+    })
 
     const clickHandler = () => {
       console.log('hello world')

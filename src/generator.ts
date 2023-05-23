@@ -3,7 +3,7 @@ import escodegen from 'escodegen'
 import MagicString from 'magic-string'
 import { attachScopes } from '@rollup/pluginutils'
 import { len } from './shared'
-import { walk, isReference, LocRange } from './ast'
+import { walk, isReference  } from './ast'
 import type { ExportAllDeclaration, ExportNamedDeclaration, ImportDeclaration, Node, Program } from 'estree'
 import type { WalkerContext } from './ast'
 import type{ RollupTransformHookContext, ModuleInfo } from './interface'
@@ -34,16 +34,14 @@ class Generator {
   }
 
   // overwrite all exprot declaration 
-  //  walkContext:WalkerContext,
   private overwriteAllExportDeclaration(node:ExportAllDeclaration, options:{
     rollupTransformHookContext: RollupTransformHookContext,
-    parent: Program,
-    pos:number
+    walkContext:WalkerContext,
   }) {
-    const { rollupTransformHookContext, parent, pos } = options
     const ref = node.source.value
     if (typeof ref !== 'string') return
     if (ref in this.dependencies) {
+      const { rollupTransformHookContext, walkContext } = options
       const { bindings: _bindings, global } = this.dependencies[ref]
       const bindings = new Set([..._bindings])
       bindings.delete('default')
@@ -51,65 +49,51 @@ class Generator {
         ?  `export const ${node.exported.name} = { ${Array.from(bindings).map(dep => `${dep}: ${global}.${dep}`)} };\n`
         : `export {${Array.from(bindings).map(dep => dep)} } from '${ref}';\n`
       const newNode = (rollupTransformHookContext.parse(code) as Node as Program).body[0] 
-      parent.body[pos] = newNode
+      walkContext.replace(newNode)
     }
   }
 
-  // erase all export keywords without 'source' type and remove duplicate declarations
-  private eraseExportKeyword(node:ExportNamedDeclaration, options:{exports:Map<string, LocRange>, parent:Program, pos:number}) {
-    if (node.source) return
-    if (node.declaration) {
-      const { exports, parent, pos } = options
-      if (node.declaration.type === 'VariableDeclaration') {
-        for (const declaration of node.declaration.declarations) {
-          if (declaration.id.type === 'Identifier') {
-            const { name } = declaration.id
-            exports.set(name, { start: node.start })
-          }
-        }
-      } else {
-        const { name } = node.declaration.id
-        exports.set(name, { start: node.start })
-      }
-      parent.body[pos] = node.declaration
-    }
-  }
-
-  private overwriteAllNamedExportsWithSource(node:ExportNamedDeclaration, program:Program, walkContext:WalkerContext, rollupTransformHookContext:RollupTransformHookContext) {
+  private overwriteAllNamedExportsWithSource(node:ExportNamedDeclaration, options:{
+    rollupTransformHookContext: RollupTransformHookContext,
+    walkContext:WalkerContext,
+    program:Program,
+  }) {
     const ref = node.source.value as string
     if (ref in this.dependencies) {
       const { global, bindings } =  this.dependencies[ref]
-      const exports = []
+      const { rollupTransformHookContext, walkContext, program  } = options
+      const exports:string[] = []
       const writeContent:string[] = []
+      // export { default } from 'module-name'
+      // export { default as A } from 'module-name'
+      // export { B as default } from 'module-name'
+      // export { A, B } from 'module-name'
       for (const specifier of node.specifiers) {
-        // export { default as A } from 'module-name'
-        // export { B as default } from 'module-name'
-        if (specifier.exported.name === 'default') {
-          if (specifier.local.name === 'default') {
-            const code = `const ${PLUGIN_GLOBAL_NAME} = { ${Array.from(bindings).map(dep => `${dep}: ${global}.${dep}`)} };\n export default ${PLUGIN_GLOBAL_NAME};\n`
-            const [n1, n2] =  (rollupTransformHookContext.parse(code) as Node as Program).body
-            walkContext.replace(n1)
-            program.body.push(n2)
+        const { local, exported } = specifier
+        if (local.name === exported.name) {
+          if (local.name === 'default') {
+            writeContent.push(`const ${PLUGIN_GLOBAL_NAME} = { ${Array.from(bindings).map(dep => `${dep}: ${global}.${dep}`)} };`)
+            writeContent.push(`export default ${PLUGIN_GLOBAL_NAME};`)
           } else {
-            const code  = `const ${PLUGIN_GLOBAL_NAME} = ${global}.${specifier.local.name};\n export default ${PLUGIN_GLOBAL_NAME};\n`
-            const [n1, n2] =  (rollupTransformHookContext.parse(code) as Node as Program).body
-            walkContext.replace(n1)
-            program.body.push(n2)
+            exports.push(local.name)
           }
         } else {
-          // export { A, B } from 'module-name'
-          const field = specifier.exported.name
-          exports.push(field)
+          if (local.name === 'default') {
+            writeContent.push(`export const ${exported.name} = { ${Array.from(bindings).map(dep => `${dep}: ${global}.${dep}`)} };`)
+          }
+          if (exported.name === 'default') {
+            writeContent.push(`const ${PLUGIN_GLOBAL_NAME} = ${global}.${specifier.local.name};`)
+            writeContent.push(`export default ${PLUGIN_GLOBAL_NAME};`)
+          }
         }
       }
       if (len(exports)) {
-        writeContent.push(`const { ${exports.map(module => module)} } = ${global};\n`, `export {${exports.map(module => module)} }`)
-        if (len(writeContent)) {
-          const [n1, n2] = (rollupTransformHookContext.parse(writeContent.join('\n'))as Node as Program).body
-          walkContext.replace(n1)
-          program.body.push(n2)
-        }
+        writeContent.push(`const { ${exports.map(module => module)} } = ${global};`, `export {${exports.map(module => module)} }`)
       }
+      if (!len(writeContent)) return
+      const [n1, ...rest] = (rollupTransformHookContext.parse(writeContent.join('\n')) as Node as Program).body
+      walkContext.replace(n1)
+      program.body.push(...rest)
     }
   }
 
@@ -137,30 +121,13 @@ class Generator {
     const ast = rollupTransformHookContext.parse(code) as Node
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const ctx:Generator = this
-    const exports:Map<string, LocRange > = new Map()
     const bindings:Map<string, string> = new Map()
-
     // -  reocrd the reference.
     // -  overwrite exports. to export { x, z, y } from 'module'
     // -  erase named exports
 
     // I decide don't support dynamic import case
 
-    if (ast.type === 'Program') {
-      const program = ast
-      program.body.forEach((node, pos) => {
-        switch (node.type) {
-          case 'ImportDeclaration':
-            this.scanForImportAndRecord(node, bindings)
-            return
-          case 'ExportAllDeclaration':
-            this.overwriteAllExportDeclaration(node, { rollupTransformHookContext, parent: program, pos })
-            return
-          case 'ExportNamedDeclaration':
-            this.eraseExportKeyword(node, { exports, parent: program, pos })
-        }
-      })
-    }
     // handle reference and rewrite identifier
     // remove importer node
     // overwrite named exports
@@ -168,8 +135,13 @@ class Generator {
     let scope = attachScopes(ast, 'scope')
     walk(ast, {
       enter(node, parent) {
-        if (node.type === 'ExportAllDeclaration') {
-          this.skip()
+        switch (node.type) {
+          case 'ImportDeclaration':
+            ctx.scanForImportAndRecord(node, bindings)
+            break
+          case 'ExportAllDeclaration':
+            ctx.overwriteAllExportDeclaration(node, { rollupTransformHookContext, walkContext: this })
+            break
         }
         if (node.scope) {
           // eslint-disable-next-line prefer-destructuring
@@ -179,6 +151,7 @@ class Generator {
           if (isReference(node, parent)) {
             switch (node.type) {
               case 'Identifier':
+                // Even if it's handle `importDeclaration`. It will be remove at leave.
                 if (bindings.has(node.name) && !scope.contains(node.name)) {
                   node.name = bindings.get(node.name)
                 }
@@ -192,23 +165,22 @@ class Generator {
         } 
         if (node.type === 'ExportNamedDeclaration') {
           if (node.source) {
-            ctx.overwriteAllNamedExportsWithSource(node, parent as Program, this, rollupTransformHookContext)
+            ctx.overwriteAllNamedExportsWithSource(node, {
+              walkContext: this,
+              program: parent as Program, 
+              rollupTransformHookContext
+            })
             this.skip()
           }
         }
         if (node.type === 'ImportDeclaration') {
           const ref = node.source.value
           if (typeof ref !== 'string') return
-          if (ref in ctx.dependencies) {
-            this.remove()
-          }
+          if (ref in ctx.dependencies) this.remove()
         }
       }
     })
     const magicStr = new MagicString(escodegen.generate(ast))
-    if (exports.size) {
-      magicStr.append(`export { ${[...exports.keys()].join(' , ')} }`)
-    }
     return { code: magicStr.toString(), map: magicStr.generateMap() }
   }
 }
