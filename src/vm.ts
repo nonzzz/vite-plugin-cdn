@@ -2,6 +2,7 @@ import os from 'os'
 import vm from 'vm'
 import { Window } from 'happy-dom'
 import type { ModuleInfo } from './interface'
+import { len } from './shared'
 
 export function createVM() {
   const bindings: Record<string, ModuleInfo> = {}
@@ -64,10 +65,12 @@ class Queue {
   maxConcurrent: number
   queue: Array<() => Promise<void>>
   running: number
+  errors: Error[]
   constructor(maxConcurrent: number) {
     this.maxConcurrent = maxConcurrent
     this.queue = []
     this.running = 0
+    this.errors = []
   }
 
   enqueue(task: () => Promise<void>) {
@@ -81,6 +84,8 @@ class Queue {
       this.running++
       try {
         await task?.()
+      } catch (err) {
+        this.errors.push(err)
       } finally {
         this.running--
         this.run()
@@ -91,6 +96,10 @@ class Queue {
   async wait() {
     while (this.running) {
       await new Promise((resolve) => setTimeout(resolve, 0))
+    }
+    if (len(this.errors)) {
+      const message  = this.errors.reduce((acc, cur) => acc += cur.message, '')
+      throw new Error(message)
     }
   }
 }

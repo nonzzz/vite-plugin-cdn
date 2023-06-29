@@ -5,11 +5,11 @@ import { is, lookup, uniq } from './shared'
 import type { MessagePort } from 'worker_threads'
 import type { TrackModule, IIFEModuleInfo, ModuleInfo } from './interface'
 
-interface WorkerData {
-  scannerModule: TrackModule[]
-  workerPort: MessagePort
-  internalThread: boolean
-}
+  interface WorkerData {
+    scannerModule: TrackModule[]
+    workerPort: MessagePort
+    internalThread: boolean
+  }
 
 function createWorkerThreads(scannerModule: TrackModule[]) {
   const { port1: mainPort, port2: workerPort } = new worker_threads.MessageChannel()
@@ -26,7 +26,11 @@ function createWorkerThreads(scannerModule: TrackModule[]) {
     return new Promise((resolve, reject) => {
       mainPort.on('message', (message) => {
         if (message.id !== id) reject(new Error(`Internal error: Expected id ${id} but got id ${message.id}`))
-        resolve(message.bindings)
+        if (message.error) {
+          reject(message.error)
+        } else {
+          resolve(message.bindings)
+        }
         worker.terminate()
       })
     })
@@ -40,46 +44,35 @@ async function tryResolveModule(
 ) {
   const { name: moduleName, ...rest } = module
 
-  const packageJson: IIFEModuleInfo & { browser: string } = Object.create(null)
-  let packageJsonPath = ''
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    Object.assign(packageJson, require(`${moduleName}/package.json`))
-    packageJsonPath = require.resolve(`${moduleName}/package.json`)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } catch (error: any) {
-    // handle esm package
-    if (error.code === 'ERR_PACKAGE_PATH_NOT_EXPORTED') {
-      const modulePath = require.resolve(moduleName)
-      packageJsonPath = lookup(modulePath, 'package.json')
-      const str = await fsp.readFile(packageJsonPath, 'utf8')
-      Object.assign(packageJson, JSON.parse(str))
+    const modulePath = require.resolve(moduleName)
+    const packageJsonPath = lookup(modulePath, 'package.json')
+    const str = await fsp.readFile(packageJsonPath, 'utf8')
+    const packageJSON:IIFEModuleInfo & { browser: string } = JSON.parse(str)
+    //  https://docs.npmjs.com/cli/v9/configuring-npm/package-json#browser
+    const { version, name, unpkg, jsdelivr, browser } = packageJSON
+    if (rest.global) {
+      dependenciesMap.set(name, { name, version, unpkg, jsdelivr, bindings: new Set(), ...rest  })
     } else {
-      throw new Error('Internal error:' + error)
+      const iifeRelativePath = typeof browser === 'string' ? browser : jsdelivr ?? unpkg
+      if (!iifeRelativePath) return
+      const iifeFilePath = lookup(packageJsonPath, iifeRelativePath)
+      const code = await fsp.readFile(iifeFilePath, 'utf8')
+      dependenciesMap.set(name, { name, version, unpkg, jsdelivr, code, bindings: new Set(), ...rest })
     }
-  }
-  // https://docs.npmjs.com/cli/v9/configuring-npm/package-json#browser
-  const { version, name, unpkg, jsdelivr, browser } = packageJson
-  // if user prvoide the global name . Skip eval script
-  if (rest.global) {
-    dependenciesMap.set(name, { name, version, unpkg, jsdelivr, bindings: new Set(), ...rest  })
-  } else {
-    const iifeRelativePath = typeof browser === 'string' ? browser : jsdelivr ?? unpkg
-    if (!iifeRelativePath) return
-    const iifeFilePath = lookup(packageJsonPath, iifeRelativePath)
-    const code = await fsp.readFile(iifeFilePath, 'utf8')
-    dependenciesMap.set(name, { name, version, unpkg, jsdelivr, code, bindings: new Set(), ...rest })
-  }
-  const pkg = await import(moduleName)
-  const keys = Object.keys(pkg)
-  if (keys.includes('default')) {
-    const pos = keys.findIndex((k) => k === 'default')
-    keys.splice(pos, 1)
-    keys.push(...Object.keys(pkg.default))
-  }
+    const pkg = await import(moduleName)
+    const keys = Object.keys(pkg)
+    if (keys.includes('default')) {
+      const pos = keys.findIndex((k) => k === 'default')
+      keys.splice(pos, 1)
+      keys.push(...Object.keys(pkg.default))
+    }
 
-  if (dependenciesMap.has(name)) {
-    dependenciesMap.get(name).bindings = new Set(keys.filter((k) => k !== '__esModule'))
+    if (dependenciesMap.has(name)) {
+      dependenciesMap.get(name).bindings = new Set(keys.filter((k) => k !== '__esModule'))
+    }
+  } catch (error) {
+    throw new Error(`try resolve ${moduleName} failed.`)
   }
 }
 
@@ -101,7 +94,6 @@ function startAsyncThreads() {
         for (const module of scannerModule) {
           queue.enqueue(() => tryResolveModule(module, dependenciesMap))
         }
-        // 
         await queue.wait()
         for (const module of scannerModule) {
           const { name } = module
@@ -120,7 +112,7 @@ function startAsyncThreads() {
         dependenciesMap.clear()
         workerPort.postMessage({ bindings: vm.bindings, id  })
       } catch (error) {
-        //
+        workerPort.postMessage({ error, id })
       }
     })()
   })

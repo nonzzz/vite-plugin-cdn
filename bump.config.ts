@@ -4,7 +4,7 @@ import json from '@rollup/plugin-json'
 
 export default define({
   input: 'src/index.ts',
-  output: { dts: true, exports: 'named' },
+  output: { dts: true, exports: 'named', preserveModules: true },
   plugins: [cleanUp({ extensions: ['.ts'] }), json()]
 })
 

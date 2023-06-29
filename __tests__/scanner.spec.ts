@@ -1,5 +1,5 @@
 import test from 'ava'
-import { createScanner } from '../dist'
+import { createScanner } from '../dist/scanner'
 
 async function expectScannerTest() {
   const scanner = createScanner(['vue'])
@@ -9,4 +9,14 @@ async function expectScannerTest() {
   })
 }
 
+async function expectScannerError() {
+  const scanner = createScanner(['react'])
+  test('scanner Error', async (t) => {
+    const error = await t.throwsAsync(scanner.scanAllDependencies())
+    t.is(error?.message, 'try resolve react failed.')
+  })
+}
+
 expectScannerTest()
+
+expectScannerError()
