@@ -1,7 +1,7 @@
 import fsp from 'fs/promises'
 import worker_threads from 'worker_threads'
 import { createConcurrentQueue, createVM, MAX_CONCURRENT } from './vm'
-import { is, lookup, uniq } from './shared'
+import { is, len, lookup, uniq } from './shared'
 import type { MessagePort } from 'worker_threads'
 import type { TrackModule, IIFEModuleInfo, ModuleInfo } from './interface'
 
@@ -19,7 +19,6 @@ function createWorkerThreads(scannerModule: TrackModule[]) {
     transferList: [workerPort],
     execArgv: []
   })
-  // record thread id
   const id = 0
   const run = () => {
     worker.postMessage({ id })
@@ -29,50 +28,49 @@ function createWorkerThreads(scannerModule: TrackModule[]) {
         if (message.error) {
           reject(message.error)
         } else {
-          resolve(message.bindings)
+          resolve({ dependencies: message.bindings, failedModule: message.failedModule })
         }
         worker.terminate()
       })
     })
   }
-  return run() as Promise<Record<string, ModuleInfo>>
+  return run() as Promise<{dependencies:Record<string, ModuleInfo>, failedModule:Set<string>}>
 }
 
 async function tryResolveModule(
   module: TrackModule,
-  dependenciesMap:Map<string, ModuleInfo>
+  dependenciesMap: Map<string, ModuleInfo>,
+  failedModule: Set<string>
 ) {
   const { name: moduleName, ...rest } = module
-
   try {
     const modulePath = require.resolve(moduleName)
     const packageJsonPath = lookup(modulePath, 'package.json')
     const str = await fsp.readFile(packageJsonPath, 'utf8')
-    const packageJSON:IIFEModuleInfo & { browser: string } = JSON.parse(str)
-    //  https://docs.npmjs.com/cli/v9/configuring-npm/package-json#browser
-    const { version, name, unpkg, jsdelivr, browser } = packageJSON
+    const packageJSON:IIFEModuleInfo = JSON.parse(str)
+    const { version, name, unpkg, jsdelivr  } = packageJSON
+    const meta:ModuleInfo = Object.create(null)
     if (rest.global) {
-      dependenciesMap.set(name, { name, version, unpkg, jsdelivr, bindings: new Set(), ...rest  })
+      Object.assign(meta, { name, version, ...rest })
     } else {
-      const iifeRelativePath = typeof browser === 'string' ? browser : jsdelivr ?? unpkg
-      if (!iifeRelativePath) return
+      const iifeRelativePath = jsdelivr || unpkg
+      if (!iifeRelativePath) throw new Error('try resolve file failed.')
       const iifeFilePath = lookup(packageJsonPath, iifeRelativePath)
       const code = await fsp.readFile(iifeFilePath, 'utf8')
-      dependenciesMap.set(name, { name, version, unpkg, jsdelivr, code, bindings: new Set(), ...rest })
+      Object.assign(meta, { name, version, code, ...rest })
     }
     const pkg = await import(moduleName)
     const keys = Object.keys(pkg)
-    if (keys.includes('default')) {
+    // If it's only exports by default
+    if (keys.includes('default') && len(keys) !== 1) {
       const pos = keys.findIndex((k) => k === 'default')
       keys.splice(pos, 1)
       keys.push(...Object.keys(pkg.default))
     }
-
-    if (dependenciesMap.has(name)) {
-      dependenciesMap.get(name).bindings = new Set(keys.filter((k) => k !== '__esModule'))
-    }
+    const bindings = new Set(keys.filter(v => v !== '__esModule'))
+    dependenciesMap.set(name, { ...meta, bindings })
   } catch (error) {
-    throw new Error(`try resolve ${moduleName} failed.`)
+    failedModule.add(moduleName)
   }
 }
 
@@ -82,17 +80,14 @@ function startAsyncThreads() {
   const { parentPort } = worker_threads
   const vm = createVM()
   const dependenciesMap: Map<string, ModuleInfo> = new Map()
+  const failedModule: Set<string> = new Set()
   parentPort?.on('message', (msg) => {
     (async () => {
       const { id } = msg
-      // An Idea. We won't need ensure the task order.
-      // We only need two tasks. First is the import module.(Node.js has implement  `import('module')`)
-      // The second is find the global name of umd or iife file. (If user pass the global. Skip find global name)
-      // If this process is ok. we don't need collect bindings in trasnform stage. :)
       try {
         const queue = createConcurrentQueue(MAX_CONCURRENT)
         for (const module of scannerModule) {
-          queue.enqueue(() => tryResolveModule(module, dependenciesMap))
+          queue.enqueue(() => tryResolveModule(module, dependenciesMap, failedModule))
         }
         await queue.wait()
         for (const module of scannerModule) {
@@ -103,14 +98,13 @@ function startAsyncThreads() {
               vm.bindings[name] = rest
               continue
             }
-            vm.run(code, rest, (info) => {
-              if (!info.unpkg && !info.jsdelivr) return null
-              return info
+            vm.run(code, rest, (err:Error) => {
+              failedModule.add(err.message)
             })
           }
         }
         dependenciesMap.clear()
-        workerPort.postMessage({ bindings: vm.bindings, id  })
+        workerPort.postMessage({ bindings: vm.bindings, id, failedModule })
       } catch (error) {
         workerPort.postMessage({ error, id })
       }
@@ -125,13 +119,17 @@ if (worker_threads.workerData?.internalThread) {
 class Scanner {
   modules: Array<TrackModule>
   dependencies: Record<string, ModuleInfo>
+  failedModule: Set<string>
   constructor(modules: Array<TrackModule | string>) {
     this.modules = this.serialization(modules)
     this.dependencies = {}
   }
 
   public async scanAllDependencies() {
-    this.dependencies = await createWorkerThreads(this.modules)
+    // we won't throw any exceptions inside this task.
+    const res = await createWorkerThreads(this.modules)
+    this.dependencies = res.dependencies
+    this.failedModule = res.failedModule
   }
 
   private serialization(modules: Array<TrackModule | string>) {
@@ -151,12 +149,7 @@ class Scanner {
   }
 
   get failedModuleNames() {
-    const failedModules:string[] = []
-    this.modules.forEach((module) => {
-      if (module.name in this.dependencies) return
-      failedModules.push(module.name)
-    })
-    return failedModules
+    return [...this.failedModule.keys()]
   }
 }
 

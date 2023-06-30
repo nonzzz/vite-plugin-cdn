@@ -20,8 +20,8 @@ class InjectScript {
   }
 
   private window: Window
-  constructor(modules: Record<string, IIFEModuleInfo>, moduleNames: string[], mode: PresetDomain) {
-    this.modules = this.prepareModules(modules, moduleNames, mode)
+  constructor(modules: Record<string, IIFEModuleInfo>, moduleNames: string[], url: string) {
+    this.modules = this.prepareModules(modules, moduleNames, url)
     this.window = new Window()
   }
 
@@ -67,7 +67,7 @@ class InjectScript {
     return document.body.innerHTML
   }
 
-  private prepareModules(modules: Record<string, IIFEModuleInfo>, moduleNames: string[], mode: PresetDomain) {
+  private prepareModules(modules: Record<string, IIFEModuleInfo>, moduleNames: string[], mode: string) {
     // we need moduleNames ensure us sciprt or link insertion order.
     const makeNode = (module: IIFEModuleInfo, tag: ReturnType<typeof isScript>): ScriptNode | LinkNode => {
       const data: ScriptNode | LinkNode = Object.create(null)
@@ -139,7 +139,7 @@ class InjectScript {
 export function createInjectScript(
   dependModules: Record<string, IIFEModuleInfo>,
   moduleNames: string[],
-  mode: PresetDomain
+  url: string
 ) {
-  return new InjectScript(dependModules, moduleNames, mode)
+  return new InjectScript(dependModules, moduleNames, url)
 }

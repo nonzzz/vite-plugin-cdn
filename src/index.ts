@@ -3,11 +3,12 @@ import { createScanner } from './scanner'
 import { createInjectScript } from './inject'
 import { createGenerator } from './generator'
 import { isSupportThreads  } from './shared'
+import { jsdelivr } from './url'
 import type { Plugin } from 'vite'
 import type { CDNPluginOptions } from './interface'
 
 function cdn(opts: CDNPluginOptions = {}): Plugin {
-  const { modules = [], mode = 'auto', include = /\.(mjs|js|ts|vue|jsx|tsx)(\?.*|)$/, exclude, logLevel = 'warn' } = opts
+  const { modules = [], url = jsdelivr, include = /\.(mjs|js|ts|vue|jsx|tsx)(\?.*|)$/, exclude, logLevel = 'warn' } = opts
   const filter = createFilter(include, exclude)
   const scanner = createScanner(modules)
   const generator = createGenerator()
@@ -33,11 +34,11 @@ function cdn(opts: CDNPluginOptions = {}): Plugin {
       if (!filter(id)) return
       if (!generator.filter(code, id)) return
       return generator.overwrite(code, this)
-    },
-    transformIndexHtml(html) {
-      const inject = createInjectScript(scanner.dependencies, scanner.dependModuleNames, mode)
-      return inject.inject(html, opts.transform)
     }
+    // transformIndexHtml(html) {
+    //   const inject = createInjectScript(scanner.dependencies, scanner.dependModuleNames, url)
+    //   return inject.inject(html, opts.transform)
+    // }
   }
 }
 

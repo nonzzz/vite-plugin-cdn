@@ -7,50 +7,51 @@ import { len } from './shared'
 export function createVM() {
   const bindings: Record<string, ModuleInfo> = {}
   const window = new Window()
-  const context = Object.create(null)
-  vm.createContext(context)
-  let _opt:ModuleInfo = null
-  let _invoke:(info: ModuleInfo) => ModuleInfo | null
-  let _id = 0
+  const context = vm.createContext({})
+  let _meta:ModuleInfo = null
+  let id = 0
+  let callerId = 0
 
-  const updateBindgs = (opt:ModuleInfo, globalName:string, invoke:(info: ModuleInfo) => ModuleInfo | null) => {
-    if (opt && !bindings[opt.name]) {
-      const re = invoke({ ...opt, global: globalName })
-      if (!re) return
-      bindings[opt.name] = re
-    }
+  const updateBindings  = (name:string, meta:ModuleInfo) => {
+    bindings[meta.name] = { ...meta, global: name }
   }
-
   const shadow = new Proxy(window, {
-    set(target, key:string, value, receiver) {
-      updateBindgs(_opt, key, _invoke)
+    set(target, key: string, value, receiver) {
+      callerId++
+      if (id === callerId) updateBindings(key, _meta)
       Reflect.set(target, key, value, receiver)
       return true
     }
   })
-  const run = (code: string, opt: ModuleInfo, invoke: (info: ModuleInfo) => ModuleInfo | null) => {
-    let id = 0
-    _opt = opt
-    _invoke = invoke
+
+  const run = (code: string, meta: ModuleInfo, handler:(err:Error)=>void) => {
+    _meta = meta
     try {
       vm.runInContext(code, context)
-      _id++
-    } catch (_) {
-    // If can't process. 
-      shadow.eval(code)
-      updateBindgs(opt, Object.keys(shadow).pop(), invoke)
-    }
-    id++
-   
-    if (id === _id) {
-      const latest  = Object.keys(context).pop()
-      if (latest) {
-        shadow[latest] = context[latest]
+    } catch (error) {
+      try {
+        window.eval(code)
+      } catch (error) {
+        const err = new Error()
+        err.message = meta.name
+        handler(err)        
       }
-      _id--
     }
-    _opt = null
-    _invoke = null
+    // TODO
+    // This is a temporary solution.
+    // when vm run script it can't run others logic in threads it will directly
+    // end the function.
+    // So we need to get the last one using the tag.
+    // https://github.com/nodejs/help/issues/1378
+    id = len(Object.keys(context))
+    Object.assign(shadow, context)
+    // context free
+    for (const key in context) {
+      Reflect.deleteProperty(context, key)
+    }
+    _meta = null
+    callerId = 0
+    id = 0
   }
   return { run, bindings }
 }

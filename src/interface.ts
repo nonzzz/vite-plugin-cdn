@@ -81,8 +81,7 @@ export interface InjectVisitor {
 
 export interface CDNPluginOptions {
   modules?: Array<TrackModule | string>
-  preset?: PresetDomain
-  mode?: PresetDomain
+  url?: string
   transform?: () => InjectVisitor
   include?: FilterPattern
   exclude?: FilterPattern
