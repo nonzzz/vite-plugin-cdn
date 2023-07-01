@@ -17,8 +17,8 @@ class Generator {
     this.dependencies = {}
   }
 
-  injectDependencies(dependencies: Record<string, ModuleInfo>) {
-    this.dependencies = dependencies
+  injectDependencies(dependencies: Map<string, ModuleInfo>) {
+    this.dependencies = Object.fromEntries(dependencies)
   }
 
   // using es-module lexer skip unnecessary file.

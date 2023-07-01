@@ -18,8 +18,6 @@ export interface TrackModule {
   spare?: Array<string> | string
 }
 
-export type PresetDomain = 'auto' | 'jsdelivr' | 'unpkg' | false
-
 export interface IIFEModuleInfo extends TrackModule {
   version: string
   unpkg?: string

@@ -1,11 +1,12 @@
 import os from 'os'
 import vm from 'vm'
 import { Window } from 'happy-dom'
-import type { ModuleInfo } from './interface'
 import { len } from './shared'
+import type { ModuleInfo } from './interface'
 
+// Record<string, ModuleInfo>
 export function createVM() {
-  const bindings: Record<string, ModuleInfo> = {}
+  const bindings:Map<string, ModuleInfo>  = new Map()
   const window = new Window()
   const context = vm.createContext({})
   let _meta:ModuleInfo = null
@@ -13,7 +14,7 @@ export function createVM() {
   let callerId = 0
 
   const updateBindings  = (name:string, meta:ModuleInfo) => {
-    bindings[meta.name] = { ...meta, global: name }
+    bindings.set(meta.name, { ...meta, global: name }) 
   }
   const shadow = new Proxy(window, {
     set(target, key: string, value, receiver) {

@@ -34,7 +34,7 @@ function createWorkerThreads(scannerModule: TrackModule[]) {
       })
     })
   }
-  return run() as Promise<{dependencies:Record<string, ModuleInfo>, failedModule:Set<string>}>
+  return run() as Promise<{dependencies:Map<string, ModuleInfo>, failedModule:Set<string>}>
 }
 
 async function tryResolveModule(
@@ -48,7 +48,7 @@ async function tryResolveModule(
     const packageJsonPath = lookup(modulePath, 'package.json')
     const str = await fsp.readFile(packageJsonPath, 'utf8')
     const packageJSON:IIFEModuleInfo = JSON.parse(str)
-    const { version, name, unpkg, jsdelivr  } = packageJSON
+    const { version, name, unpkg, jsdelivr } = packageJSON
     const meta:ModuleInfo = Object.create(null)
     if (rest.global) {
       Object.assign(meta, { name, version, ...rest })
@@ -95,7 +95,7 @@ function startAsyncThreads() {
           if (dependenciesMap.has(name)) {
             const { code, ...rest } =  dependenciesMap.get(name)
             if (!code) {
-              vm.bindings[name] = rest
+              vm.bindings.set(name, rest)
               continue
             }
             vm.run(code, rest, (err:Error) => {
@@ -118,11 +118,11 @@ if (worker_threads.workerData?.internalThread) {
 
 class Scanner {
   modules: Array<TrackModule>
-  dependencies: Record<string, ModuleInfo>
+  dependencies: Map<string, ModuleInfo>
   failedModule: Set<string>
   constructor(modules: Array<TrackModule | string>) {
     this.modules = this.serialization(modules)
-    this.dependencies = {}
+    this.dependencies = new Map()
   }
 
   public async scanAllDependencies() {
@@ -140,16 +140,6 @@ class Scanner {
         return module
       })
       .filter((v) => v.name)
-  }
-
-  // ensure the order
-  get dependModuleNames() {
-    const deps = Object.keys(this.dependencies)
-    return this.modules.map((v) => v.name).filter((v) => deps.includes(v))
-  }
-
-  get failedModuleNames() {
-    return [...this.failedModule.keys()]
   }
 }
 

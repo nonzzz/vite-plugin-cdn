@@ -23,7 +23,7 @@ function cdn(opts: CDNPluginOptions = {}): Plugin {
         await scanner.scanAllDependencies()
         generator.injectDependencies(scanner.dependencies)
         if (logLevel === 'warn') {
-          scanner.failedModuleNames.forEach((name) => config.logger.error(`vite-plugin-cdn2: ${name} resolved failed.Please check it.`))
+          scanner.failedModule.forEach((name) => config.logger.error(`vite-plugin-cdn2: ${name} resolved failed.Please check it.`))
         }
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
@@ -34,15 +34,15 @@ function cdn(opts: CDNPluginOptions = {}): Plugin {
       if (!filter(id)) return
       if (!generator.filter(code, id)) return
       return generator.overwrite(code, this)
+    },
+    transformIndexHtml(html) {
+      const inject = createInjectScript(scanner.dependencies, url)
+      return inject.text(html, opts.transform)
     }
-    // transformIndexHtml(html) {
-    //   const inject = createInjectScript(scanner.dependencies, scanner.dependModuleNames, url)
-    //   return inject.inject(html, opts.transform)
-    // }
   }
 }
 
 export { cdn }
 export default cdn
 
-export type { InjectVisitor, PresetDomain, TrackModule, CDNPluginOptions } from './interface'
+export type { InjectVisitor, TrackModule, CDNPluginOptions } from './interface'
