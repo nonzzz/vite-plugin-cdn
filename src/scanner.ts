@@ -50,14 +50,14 @@ async function tryResolveModule(
     const packageJSON:IIFEModuleInfo = JSON.parse(str)
     const { version, name, unpkg, jsdelivr } = packageJSON
     const meta:ModuleInfo = Object.create(null)
+    const iifeRelativePath = jsdelivr || unpkg
+    if (!iifeRelativePath) throw new Error('try resolve file failed.')
     if (rest.global) {
-      Object.assign(meta, { name, version, ...rest })
+      Object.assign(meta, { name, version, relativeModule: iifeRelativePath, ...rest })
     } else {
-      const iifeRelativePath = jsdelivr || unpkg
-      if (!iifeRelativePath) throw new Error('try resolve file failed.')
       const iifeFilePath = lookup(packageJsonPath, iifeRelativePath)
       const code = await fsp.readFile(iifeFilePath, 'utf8')
-      Object.assign(meta, { name, version, code, ...rest })
+      Object.assign(meta, { name, version, code, relativeModule: iifeRelativePath, ...rest })
     }
     const pkg = await import(moduleName)
     const keys = Object.keys(pkg)
@@ -123,6 +123,7 @@ class Scanner {
   constructor(modules: Array<TrackModule | string>) {
     this.modules = this.serialization(modules)
     this.dependencies = new Map()
+    this.failedModule = new Set()
   }
 
   public async scanAllDependencies() {

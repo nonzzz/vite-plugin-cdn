@@ -20,6 +20,7 @@ export interface TrackModule {
 
 export interface IIFEModuleInfo extends TrackModule {
   version: string
+  relativeModule: string
   unpkg?: string
   jsdelivr?: string
 }
@@ -30,7 +31,7 @@ export interface ModuleInfo extends IIFEModuleInfo{
 }
 
 export interface Serialization {
-  url?: string[]
+  url?: Set<string>
   type?: string
   name: string
   tag: 'link' | 'script'

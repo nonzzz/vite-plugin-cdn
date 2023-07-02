@@ -4,7 +4,6 @@ import { Window } from 'happy-dom'
 import { len } from './shared'
 import type { ModuleInfo } from './interface'
 
-// Record<string, ModuleInfo>
 export function createVM() {
   const bindings:Map<string, ModuleInfo>  = new Map()
   const window = new Window()

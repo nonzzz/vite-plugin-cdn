@@ -1,18 +1,29 @@
 //  refer: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script
 import { URL } from 'url'
 import { Window } from 'happy-dom'
-import { uniq } from './shared'
+import {  uniq } from './shared'
 import type { IIFEModuleInfo, CDNPluginOptions, ScriptNode, LinkNode } from './interface'
 
 function isScript(url: string) {
   return url.split('.').pop() === 'js' ? 'script' : 'link'
 }
 
-class InjectScript {
-  private modules: {
-    links: Record<string, LinkNode>
-    scripts: Record<string, ScriptNode>
+function makeURL(moduleMeta: IIFEModuleInfo, baseURL:string) {
+  const { version, name: packageName, relativeModule } = moduleMeta
+  if (!baseURL) return
+  return new URL(`${packageName}@${version}/${relativeModule}`, baseURL).href
+}
+
+function makeNode(packageName:string):ScriptNode | LinkNode {
+  return {
+    tag: 'link',
+    url: new Set(),
+    name: packageName
   }
+}
+
+class InjectScript {
+  private modules:Record<string, LinkNode | ScriptNode>
 
   private window: Window
   constructor(modules: Map<string, IIFEModuleInfo>, url: string) {
@@ -21,25 +32,22 @@ class InjectScript {
   }
 
   toTags() {
-    const nodes = [...Object.values(this.modules.scripts), ...Object.values(this.modules.links)]
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    return nodes.flatMap(({ name: _, tag, url = [], ...restProps }) => {
-      return url.map((url) => {
-        const element = this.window.document.createElement(tag)
-        if (tag === 'script') {
-          element.setAttribute('src', url)
-        } else {
-          element.setAttribute('href', url)
-        }
-        for (const prop in restProps) {
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-          // @ts-ignore
-          const value = restProps[prop]
-          element.setAttribute(prop, value.toString())
-        }
-        return element.toString()
-      })
-    })
+    const tags = []
+    for (const k in this.modules) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { tag, url, name: _, ...restProps } = this.modules[k]
+      if (url.size) {
+        url.forEach((l) => {
+          const element = this.window.document.createElement(tag)
+          element.setAttribute(tag === 'script' ? 'src' : 'href', l)
+          for (const prop in restProps) {
+            element.setAttribute(prop, restProps[prop])
+          }
+          tags.push(element.toString())
+        })
+      }
+    }
+    return tags
   }
 
   text(html: string, transformHook?: CDNPluginOptions['transform']) {
@@ -47,11 +55,14 @@ class InjectScript {
     document.body.innerHTML = html
     if (transformHook) {
       const hook = transformHook()
-      for (const module in this.modules.scripts) {
-        hook.script?.(this.modules.scripts[module])
-      }
-      for (const module in this.modules.links) {
-        hook.link?.(this.modules.links[module])
+      for (const k in this.modules) {
+        const node = this.modules[k]
+        if (node.tag === 'script') {
+          hook.script?.(node)
+        }
+        if (node.tag === 'link') {
+          hook.link?.(node)
+        }
       }
     }
     // issue #6
@@ -62,74 +73,46 @@ class InjectScript {
     return document.body.innerHTML
   }
 
-  private prepareSource(modules: Map<string, IIFEModuleInfo>, mode: string) {
-    // we need moduleNames ensure us sciprt or link insertion order.
-    const makeNode = (module: IIFEModuleInfo, tag: ReturnType<typeof isScript>): ScriptNode | LinkNode => {
-      const data: ScriptNode | LinkNode = Object.create(null)
-      data.url = []
-      data.name = module.name
-      data.tag = tag
-      return data
+  private prepareSource(modules: Map<string, IIFEModuleInfo>, baseURL: string) {
+    const container:Record<string, LinkNode | ScriptNode> = {}
+
+    const traverseModule = (moduleMeta: IIFEModuleInfo, moduleName: string) => {
+      const { spare, name: packageName } = moduleMeta
+      if (!spare) return
+      if (Array.isArray(spare)) {
+        for (const s of uniq(spare)) {
+          traverseModule({ ...moduleMeta, spare: s }, moduleName)
+        }
+        return
+      } 
+      const tag = isScript(spare)
+      const mark = `__${moduleName}__${tag}__`
+      if (mark in container) {
+        const node = container[mark]
+        node.url.add(spare) 
+        return
+      }
+      container[mark] = makeNode(packageName)
+      container[mark].url.add(spare)
+      container[mark].tag = isScript(spare)
     }
-    const links: Record<string, LinkNode> = {}
-    const scripts: Record<string, ScriptNode> = {}
 
-    // modules.forEach(((module,moduleName)) => {
-    //   if (moduleName in modules) {
-    //     const module = modules[moduleName]
-    //     if (typeof mode === 'string') {
-    //       const url = this.makeURL(module, mode)
-    //       const tag = isScript(url)
-    //       const node = makeNode(module, tag)
-    //       node.url?.push(url)
-    //       if (tag === 'script') {
-    //         scripts[moduleName] = node as ScriptNode
-    //       } else {
-    //         links[moduleName] = node as LinkNode
-    //       }
-    //     }
-    //     const spare = uniq(Array.isArray(module.spare) ? module.spare : module.spare ? [module.spare] : [])
-    //     spare.forEach((url) => {
-    //       const tag = isScript(url)
-    //       if (tag === 'script') {
-    //         if (moduleName in scripts) {
-    //           scripts[moduleName].url?.push(url)
-    //         } else {
-    //           const node = makeNode(module, 'script')
-    //           node.url?.push(url)
-    //           scripts[moduleName] = node as ScriptNode
-    //         }
-    //       }
-    //       if (tag === 'link') {
-    //         if (moduleName in links) {
-    //           links[moduleName].url?.push(url)
-    //         } else {
-    //           const node = makeNode(module, 'link')
-    //           node.url?.push(url)
-    //           links[moduleName] = node as LinkNode
-    //         }
-    //       }
-    //     })
-    //   }
-    // })
-    return { links, scripts }
-  }
-
-  // we handle all dependenices in scanner. So in this stage. The module
-  // must have the following fields.
-  private makeURL(module: IIFEModuleInfo, baseURL:string) {
-    // if don't have any path will
-    const { version, name } = module
-    if (!baseURL) return ''
-    const url = `${name}@${version}/${module[baseURL]}`
-    return new URL(url, baseURL).href
+    modules.forEach((meta, moduleName) => {
+      const node = makeNode(meta.name)
+      const url = makeURL(meta, baseURL)
+      node.url.add(url)
+      node.tag = isScript(url)
+      const mark = `__${moduleName}__${node.tag}__`
+      container[mark] = node
+      if (meta.spare)  traverseModule(meta, moduleName)
+    })
+    return container
   }
 }
 
 export function createInjectScript(
-  dependModules: Record<string, IIFEModuleInfo>,
-  moduleNames: string[],
+  dependModules: Map<string, IIFEModuleInfo>,
   url: string
 ) {
-  return new InjectScript(dependModules, moduleNames, url)
+  return new InjectScript(dependModules, url)
 }
