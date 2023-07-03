@@ -24,7 +24,12 @@ export class CodeGen {
   async transform(code:string) {
     const ast = await babelParse(code)
     traverse(ast, {
-      // 
+      enter(path, state) {
+        // 
+      },
+      exit(path, state) {
+        // 
+      }
     })
     const result = await transformFromAstAsync(ast)
     return {

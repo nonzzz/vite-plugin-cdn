@@ -23,6 +23,18 @@
     "README.md",
     "LICENSE"
   ],
+  "exports":{
+    ".":{
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./url":{
+      "import": "./dist/url.mjs",
+      "require": "./dist/url.js"
+    },
+    "./*": "./*"
+  },
   "author": "Kanno",
   "license": "MIT",
   "homepage": "https://github.com/nonzzz/vite-plugin-cdn",
