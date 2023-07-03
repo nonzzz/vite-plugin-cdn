@@ -1,5 +1,5 @@
 import test from 'ava'
-import { createCodeGenerator } from '../src/code-gen'
+import { createCodeGenerator } from '../dist/code-gen'
 import { createScanner } from '../dist/scanner'
 import type { ModuleInfo } from '../src/interface'
 

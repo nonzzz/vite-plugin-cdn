@@ -1,7 +1,7 @@
 import { createFilter } from '@rollup/pluginutils'
 import { createScanner } from './scanner'
 import { createInjectScript } from './inject'
-import { createGenerator } from './generator'
+import { createCodeGenerator } from './code-gen'
 import { isSupportThreads  } from './shared'
 import { jsdelivr } from './url'
 import type { Plugin } from 'vite'
@@ -11,7 +11,7 @@ function cdn(opts: CDNPluginOptions = {}): Plugin {
   const { modules = [], url = jsdelivr, include = /\.(mjs|js|ts|vue|jsx|tsx)(\?.*|)$/, exclude, logLevel = 'warn' } = opts
   const filter = createFilter(include, exclude)
   const scanner = createScanner(modules)
-  const generator = createGenerator()
+  const generator = createCodeGenerator()
   return {
     name: 'vite-plugin-cdn',
     enforce: 'post',
@@ -33,7 +33,7 @@ function cdn(opts: CDNPluginOptions = {}): Plugin {
     async transform(code, id) {
       if (!filter(id)) return
       if (!generator.filter(code, id)) return
-      return generator.overwrite(code, this)
+      return generator.transform(code)
     },
     transformIndexHtml(html) {
       const inject = createInjectScript(scanner.dependencies, url)

@@ -3,8 +3,16 @@ import fsp from 'fs/promises'
 import path from 'path'
 import { build } from 'vite'
 import { cdn } from '../dist'
-import { getId, sleep } from '../internal/shared'
 import type { CDNPluginOptions } from '../dist'
+
+function sleep(delay: number) {
+  return new Promise((resolve) => setTimeout(resolve, delay))
+}
+
+function getId() {
+  return Math.random().toString(32).slice(2, 10)
+}
+
 
 const defaultWd = __dirname
 const dist = path.join(defaultWd, 'dist')

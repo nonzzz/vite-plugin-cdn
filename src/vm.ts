@@ -28,30 +28,32 @@ export function createVM() {
     _meta = meta
     try {
       vm.runInContext(code, context)
+      // TODO
+      // This is a temporary solution.
+      // when vm run script it can't run others logic in threads it will directly
+      // end the function.
+      // So we need to get the last one using the tag.
+      // https://github.com/nodejs/help/issues/1378
+      id = len(Object.keys(context))
+      Object.assign(shadow, context)
+      // context free
+      for (const key in context) {
+        Reflect.deleteProperty(context, key)
+      }
+      _meta = null
+      callerId = 0
+      id = 0
     } catch (error) {
       try {
+        // In most cases there will only be one variable
         window.eval(code)
+        updateBindings(Object.keys(shadow).pop(), meta)
       } catch (error) {
         const err = new Error()
         err.message = meta.name
         handler(err)        
       }
     }
-    // TODO
-    // This is a temporary solution.
-    // when vm run script it can't run others logic in threads it will directly
-    // end the function.
-    // So we need to get the last one using the tag.
-    // https://github.com/nodejs/help/issues/1378
-    id = len(Object.keys(context))
-    Object.assign(shadow, context)
-    // context free
-    for (const key in context) {
-      Reflect.deleteProperty(context, key)
-    }
-    _meta = null
-    callerId = 0
-    id = 0
   }
   return { run, bindings }
 }
