@@ -39,18 +39,33 @@ export class CodeGen {
   }
 
   private overWriteExportNamedDeclaration(path:NodePath<t.ExportNamedDeclaration>, references:Map<string, string>) {
-    const nodes = []
-    const needNewLine = false
+    const nodes:Array<{node:t.VariableDeclarator | t.ObjectExpression | t.MemberExpression, newLine?:boolean}> = []
+    // let hasReference = false
     // export { default } from 'module'
     // export {default as A } from 'module'
     // export { B as default } from 'module'
     // export { A , B } from 'module'
+    const hasBindings = path.node.source
+    const globalName = hasBindings ? this.dependencies.get(path.node.source.value).global : ''
+    const bindings:Set<string> = hasBindings ? this.dependencies.get(path.node.source.value).bindings : new Set()
     for (const specifier of path.node.specifiers) {
       if (specifier.type === 'ExportSpecifier') {
         const { local, exported } = specifier
         if (exported.type !== 'Identifier') continue
         if (local.name === exported.name) {
-          // 
+          if (references.has(local.name)) {
+            if (local.name === 'default' && hasBindings) {
+              const memberExpression = (p) => t.memberExpression(t.identifier(globalName), t.identifier(p))
+              const objectExpression = [...bindings.keys()].map(p => t.objectProperty(t.identifier(p), memberExpression(p)))
+              const node = t.objectExpression(objectExpression)
+              nodes.push({ node })
+            } else {
+              const [o, p] = references.get(local.name).split('.')
+              const memberExpression = t.memberExpression(t.identifier(o), t.identifier(p))
+              const node = t.variableDeclarator(t.identifier(local.name), memberExpression)
+              nodes.push({ node })
+            }
+          } 
         } else {
           if (local.name === 'default') {
             // 
@@ -60,6 +75,11 @@ export class CodeGen {
           }
         }
       }
+    }
+    const variableDeclaratorNodes = nodes.filter(({ node }) => node.type === 'VariableDeclarator').map(({ node }) => node) as unknown as t.VariableDeclarator[]
+    const variableDeclaration = t.variableDeclaration('const', variableDeclaratorNodes)
+    if (variableDeclaratorNodes.length) {
+      path.replaceWith(t.exportNamedDeclaration(variableDeclaration, []))
     }
   }
 
