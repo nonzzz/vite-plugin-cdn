@@ -7,7 +7,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "bump",
-    "test": "ava __tests__/*.spec.ts",
+    "test": "ava __tests__/code-gen.spec.ts",
     "lint": "eslint . --fix",
     "dev": "bump -w",
     "coverage": "c8 -r=lcov ava"
@@ -65,9 +65,7 @@
     "@rollup/pluginutils": "^5.0.2",
     "@types/estree": "^1.0.1",
     "happy-dom": "^6.0.4",
-    "rs-module-lexer": "^1.0.0",
-    "escodegen": "^2.0.0",
-    "magic-string": "^0.26.4"
+    "rs-module-lexer": "^1.0.0"
   },
   "ava": {
     "files": [

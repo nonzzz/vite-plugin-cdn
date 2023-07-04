@@ -48,10 +48,8 @@ export function createVM() {
         // In most cases there will only be one variable
         window.eval(code)
         updateBindings(Object.keys(shadow).pop(), meta)
-      } catch (error) {
-        const err = new Error()
-        err.message = meta.name
-        handler(err)        
+      } catch (_) {
+        handler(new Error(meta.name))        
       }
     }
   }

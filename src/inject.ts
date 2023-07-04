@@ -1,7 +1,7 @@
 //  refer: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script
 import { URL } from 'url'
 import { Window } from 'happy-dom'
-import {  uniq } from './shared'
+import { uniq } from './shared'
 import type { IIFEModuleInfo, CDNPluginOptions, ScriptNode, LinkNode } from './interface'
 
 function isScript(url: string) {
@@ -23,7 +23,7 @@ function makeNode(packageName:string):ScriptNode | LinkNode {
 }
 
 class InjectScript {
-  private modules:Record<string, LinkNode | ScriptNode>
+  private modules:Map<string, LinkNode | ScriptNode>
 
   private window: Window
   constructor(modules: Map<string, IIFEModuleInfo>, url: string) {
@@ -33,9 +33,9 @@ class InjectScript {
 
   toTags() {
     const tags = []
-    for (const k in this.modules) {
+    this.modules.forEach((node) => {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { tag, url, name: _, ...restProps } = this.modules[k]
+      const { tag, url, name: _, ...restProps } = node
       if (url.size) {
         url.forEach((l) => {
           const element = this.window.document.createElement(tag)
@@ -46,7 +46,7 @@ class InjectScript {
           tags.push(element.toString())
         })
       }
-    }
+    })
     return tags
   }
 
@@ -55,15 +55,14 @@ class InjectScript {
     document.body.innerHTML = html
     if (transformHook) {
       const hook = transformHook()
-      for (const k in this.modules) {
-        const node = this.modules[k]
+      this.modules.forEach((node) => {
         if (node.tag === 'script') {
           hook.script?.(node)
         }
         if (node.tag === 'link') {
           hook.link?.(node)
         }
-      }
+      })
     }
     // issue #6
     const element = document.body.querySelector('title')
@@ -74,7 +73,7 @@ class InjectScript {
   }
 
   private prepareSource(modules: Map<string, IIFEModuleInfo>, baseURL: string) {
-    const container:Record<string, LinkNode | ScriptNode> = {}
+    const container:Map<string, LinkNode | ScriptNode> = new Map()
 
     const traverseModule = (moduleMeta: IIFEModuleInfo, moduleName: string) => {
       const { spare, name: packageName } = moduleMeta
@@ -87,14 +86,15 @@ class InjectScript {
       } 
       const tag = isScript(spare)
       const mark = `__${moduleName}__${tag}__`
-      if (mark in container) {
-        const node = container[mark]
-        node.url.add(spare) 
+      if (container.has(mark)) {
+        const node = container.get(mark)
+        node.url.add(spare)
         return
       }
-      container[mark] = makeNode(packageName)
-      container[mark].url.add(spare)
-      container[mark].tag = isScript(spare)
+      const node = makeNode(packageName)
+      node.url.add(spare)
+      node.tag = isScript(spare)
+      container.set(mark, node)
     }
 
     modules.forEach((meta, moduleName) => {
@@ -103,7 +103,7 @@ class InjectScript {
       node.url.add(url)
       node.tag = isScript(url)
       const mark = `__${moduleName}__${node.tag}__`
-      container[mark] = node
+      container.set(mark, node)
       if (meta.spare)  traverseModule(meta, moduleName)
     })
     return container

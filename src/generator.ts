@@ -90,7 +90,7 @@ class Generator {
       if (len(exports)) {
         writeContent.push(`const { ${exports.map(module => module)} } = ${global};`, `export {${exports.map(module => module)} }`)
       }
-      if (!len(writeContent)) return
+      if (!len(writeContent)) return  
       const [n1, ...rest] = (rollupTransformHookContext.parse(writeContent.join('\n')) as Node as Program).body
       walkContext.replace(n1)
       program.body.push(...rest)

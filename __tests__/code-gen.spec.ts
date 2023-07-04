@@ -23,22 +23,12 @@ test('filter', async (t) => {
 })
 
 test('transform', async (t) => {
-  const code = `
-   import { ref } from 'vue';
-   function useState (val) {
-     const state = ref(val);
-     const dispatch = (next) => {
-        state.value =  typeof next === 'function' ? next(state.value) : next;
-     }
-     return [state,dispatch];
-   }
-   const [visible,setVisible] = useState(false);
-  `
+  const code = 'import { version } from \'vue\';\n console.log(version);\n function t() { const version = 3;\n console.log(version) }'
   const scanner = createScanner(['vue'])
   await scanner.scanAllDependencies()
   const codeGen = createCodeGenerator()
   codeGen.injectDependencies(scanner.dependencies)
-  //   const res = await codeGen.transform(code)
-  //   t.is(res.code, '')
+  const res = await codeGen.transform(code)
+  t.is(res.code, 'console.log(Vue.version);\nfunction t() {\n  const version = 3;\n  console.log(version);\n}')
   t.pass()
 })
