@@ -148,16 +148,16 @@ export class CodeGen {
   }
 
   private overWriteExportAllDeclaration(path:NodePath<t.ExportAllDeclaration>) {
-    const nodes:Array<t.VariableDeclarator> = []
-    const { bindings, global: globalName } = this.dependencies.get(path.node.source.value)
+    const nodes:Array<t.ExportSpecifier> = []
+    const { bindings } = this.dependencies.get(path.node.source.value)
     bindings.forEach((binding) => {
-      const memberExpression = t.memberExpression(t.identifier(globalName), t.identifier(binding))
-      const node = t.variableDeclarator(t.identifier(binding), memberExpression)
+      const identifier = t.identifier(binding)
+      const node = t.exportSpecifier(identifier, identifier)
       nodes.push(node)
     })
     if (len(nodes)) {
-      const variableDeclaration = t.variableDeclaration('const', nodes)
-      path.replaceWith(t.exportNamedDeclaration(variableDeclaration, []))
+      const exportNamedDeclaration = t.exportNamedDeclaration(null, nodes, t.stringLiteral(path.node.source.value))
+      path.replaceWith(exportNamedDeclaration)
     }
   }
 
