@@ -103,3 +103,60 @@ test('exports with source and re named exported name', async (t) => {
   const res = await codeGen.transform(code)
   t.is(res.code, 'export const ref = Vue.ref;\nexport default Vue.version;')
 })
+
+test('export all with source and re named it with default', async (t) => {
+  const code = 'export * as default from \'vue\''
+  const scanner = createScanner(['vue'])
+  await scanner.scanAllDependencies()
+  const codeGen = createCodeGenerator()
+  codeGen.injectDependencies(scanner.dependencies)
+  const res = await codeGen.transform(code)
+  if (!res.code) return
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  const ast = await parse(res.code, { babelrc: false, configFile: false })!
+  const keys:Set<string> = new Set()
+  await traverse(ast, {
+    ObjectProperty: (path) => {
+      path.node.key.type === 'Identifier' && keys.add(path.node.key.name)
+    }
+  })
+  t.is(keys.size, scanner.dependencies.get('vue').bindings.size)
+})
+
+test('export all with source and re named it with custom', async (t) => {
+  const code = 'export * as myVue from \'vue\''
+  const scanner = createScanner(['vue'])
+  await scanner.scanAllDependencies()
+  const codeGen = createCodeGenerator()
+  codeGen.injectDependencies(scanner.dependencies)
+  const res = await codeGen.transform(code)
+  if (!res.code) return
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  const ast = await parse(res.code, { babelrc: false, configFile: false })!
+  const keys:Set<string> = new Set()
+  await traverse(ast, {
+    ObjectProperty: (path) => {
+      path.node.key.type === 'Identifier' && keys.add(path.node.key.name)
+    }
+  })
+  t.is(keys.size, scanner.dependencies.get('vue').bindings.size)
+})
+
+test('export all declaration', async (t) => {
+  const code = 'export * from \'vue\''
+  const scanner = createScanner(['vue'])
+  await scanner.scanAllDependencies()
+  const codeGen = createCodeGenerator()
+  codeGen.injectDependencies(scanner.dependencies)
+  const res = await codeGen.transform(code)
+  if (!res.code) return
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  const ast = await parse(res.code, { babelrc: false, configFile: false })!
+  let size = 0
+  await traverse(ast, {
+    VariableDeclarator: () => {
+      size++
+    }
+  })
+  t.is(size, scanner.dependencies.get('vue').bindings.size)
+})

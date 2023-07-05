@@ -103,17 +103,37 @@ export class CodeGen {
           scanNamedExportsWithoutSource(local, exported, specifier)
         }
       }
+      if (specifier.type === 'ExportNamespaceSpecifier') {
+        const e = specifier.exported
+        if (e.name === 'default') {
+          const memberExpression = (p) => t.memberExpression(t.identifier(globalName), t.identifier(p))
+          const objectExpression = [...bindings.keys()].map(p => t.objectProperty(t.identifier(p), memberExpression(p)))
+          const node = t.objectExpression(objectExpression)
+          nodes.push(node)
+        } else {
+          const memberExpression = (p) => t.memberExpression(t.identifier(globalName), t.identifier(p))
+          const objectExpression = [...bindings.keys()].map(p => t.objectProperty(t.identifier(p), memberExpression(p)))
+          const node = t.variableDeclarator(t.identifier(e.name), t.objectExpression(objectExpression))
+          nodes.push(node)
+        }
+      }
     }
 
     // export { default } from 'module'
     // export {default as A } from 'module'
     // export { B as default } from 'module'
     // export { A , B } from 'module'
+    // export * as default from 'module'
+    // export * as xx from 'module'
     const variableDeclaratorNodes = nodes.filter((node):node is t.VariableDeclarator => node.type === 'VariableDeclarator')
     const objectOrMemberExpression = nodes.filter((node):node is t.ObjectExpression | t.MemberExpression => node.type !== 'VariableDeclarator')
     if (len(objectOrMemberExpression)) {
       const exportDefaultDeclaration = t.exportDefaultDeclaration(objectOrMemberExpression[0])
-      path.insertAfter(exportDefaultDeclaration)
+      if (len(variableDeclaratorNodes) || len(natives)) {
+        path.insertAfter(exportDefaultDeclaration)
+      } else {
+        path.replaceWith(exportDefaultDeclaration)
+      }
     }
     if (len(variableDeclaratorNodes)) {
       const variableDeclaration = t.variableDeclaration('const', variableDeclaratorNodes)
@@ -124,6 +144,20 @@ export class CodeGen {
       } else {
         path.replaceWith(t.exportNamedDeclaration(variableDeclaration, []))
       }
+    }
+  }
+
+  private overWriteExportAllDeclaration(path:NodePath<t.ExportAllDeclaration>) {
+    const nodes:Array<t.VariableDeclarator> = []
+    const { bindings, global: globalName } = this.dependencies.get(path.node.source.value)
+    bindings.forEach((binding) => {
+      const memberExpression = t.memberExpression(t.identifier(globalName), t.identifier(binding))
+      const node = t.variableDeclarator(t.identifier(binding), memberExpression)
+      nodes.push(node)
+    })
+    if (len(nodes)) {
+      const variableDeclaration = t.variableDeclaration('const', nodes)
+      path.replaceWith(t.exportNamedDeclaration(variableDeclaration, []))
     }
   }
 
@@ -158,6 +192,9 @@ export class CodeGen {
               }
               break
             case 'ExportAllDeclaration':
+              if (this.dependencies.has(path.node.source.value)) {
+                this.overWriteExportAllDeclaration(path as NodePath<t.ExportAllDeclaration>)
+              }
           }
           path.skip()
         },
