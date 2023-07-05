@@ -1,4 +1,4 @@
-    # Background
+# Background
 
 `vite-plugin-cdn2` is a vite plugin that can replace `vite-plugin-cdn`,`vite-plugin-cdn2` or others same as package.
 

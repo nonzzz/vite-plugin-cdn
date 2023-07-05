@@ -39,46 +39,86 @@ export class CodeGen {
   }
 
   private overWriteExportNamedDeclaration(path:NodePath<t.ExportNamedDeclaration>, references:Map<string, string>) {
-    const nodes:Array<{node:t.VariableDeclarator | t.ObjectExpression | t.MemberExpression, newLine?:boolean}> = []
-    // let hasReference = false
-    // export { default } from 'module'
-    // export {default as A } from 'module'
-    // export { B as default } from 'module'
-    // export { A , B } from 'module'
+    const nodes:Array<t.VariableDeclarator | t.ObjectExpression | t.MemberExpression> = []
+    const natives:Array<t.ExportSpecifier> = []
     const hasBindings = path.node.source
     const globalName = hasBindings ? this.dependencies.get(path.node.source.value).global : ''
     const bindings:Set<string> = hasBindings ? this.dependencies.get(path.node.source.value).bindings : new Set()
+
+    const scanNamedExportsWithSource = (l:t.Identifier, e:t.Identifier, specifier:t.ExportSpecifier) => {
+      if (!bindings.size) return
+      if (l.name === 'default' && l.name !== e.name) {
+        const memberExpression = (p) => t.memberExpression(t.identifier(globalName), t.identifier(p))
+        const objectExpression = [...bindings.keys()].map(p => t.objectProperty(t.identifier(p), memberExpression(p)))
+        const node = t.variableDeclarator(t.identifier(e.name), t.objectExpression(objectExpression))
+        nodes.push(node)
+        return
+      }
+      if (e.name === 'default' && l.name !== e.name) {
+        const node = t.memberExpression(t.identifier(globalName), t.identifier(l.name))
+        nodes.push(node)
+        return
+      }
+      if (l.name === e.name) {
+        if (l.name === 'default') {
+          const memberExpression = (p) => t.memberExpression(t.identifier(globalName), t.identifier(p))
+          const objectExpression = [...bindings.keys()].map(p => t.objectProperty(t.identifier(p), memberExpression(p)))
+          const node = t.objectExpression(objectExpression)
+          nodes.push(node) 
+          return
+        }
+        if (bindings.has(l.name)) {
+          const memberExpression = t.memberExpression(t.identifier(globalName), t.identifier(l.name))
+          const node = t.variableDeclarator(t.identifier(l.name), memberExpression)
+          nodes.push(node)
+          return
+        }
+      }
+      natives.push(specifier)
+    }
+
+    const scanNamedExportsWithoutSource = (l:t.Identifier, e:t.Identifier, specifier:t.ExportSpecifier) => {
+      if (references.has(l.name)) {
+        const [o, p] = references.get(l.name).split('.')
+        if (e.name === 'default') {
+          const node = t.memberExpression(t.identifier(o), t.identifier(p))
+          nodes.push(node)
+          return
+        }
+        const memberExpression = t.memberExpression(t.identifier(o), t.identifier(p))
+        const node = t.variableDeclarator(t.identifier(l.name), memberExpression)
+        nodes.push(node)
+        return 
+      }
+      natives.push(specifier)
+    }
+
     for (const specifier of path.node.specifiers) {
       if (specifier.type === 'ExportSpecifier') {
         const { local, exported } = specifier
         if (exported.type !== 'Identifier') continue
-        if (local.name === exported.name) {
-          if (references.has(local.name)) {
-            if (local.name === 'default' && hasBindings) {
-              const memberExpression = (p) => t.memberExpression(t.identifier(globalName), t.identifier(p))
-              const objectExpression = [...bindings.keys()].map(p => t.objectProperty(t.identifier(p), memberExpression(p)))
-              const node = t.objectExpression(objectExpression)
-              nodes.push({ node })
-            } else {
-              const [o, p] = references.get(local.name).split('.')
-              const memberExpression = t.memberExpression(t.identifier(o), t.identifier(p))
-              const node = t.variableDeclarator(t.identifier(local.name), memberExpression)
-              nodes.push({ node })
-            }
-          } 
+        if (hasBindings) {
+          scanNamedExportsWithSource(local, exported, specifier)
         } else {
-          if (local.name === 'default') {
-            // 
-          }
-          if (exported.name === 'default') {
-            // 
-          }
+          scanNamedExportsWithoutSource(local, exported, specifier)
         }
       }
     }
-    const variableDeclaratorNodes = nodes.filter(({ node }) => node.type === 'VariableDeclarator').map(({ node }) => node) as unknown as t.VariableDeclarator[]
-    const variableDeclaration = t.variableDeclaration('const', variableDeclaratorNodes)
+
+    // export { default } from 'module'
+    // export {default as A } from 'module'
+    // export { B as default } from 'module'
+    // export { A , B } from 'module'
+    // const cap  = len(path.node.specifiers)
+  
+    const variableDeclaratorNodes = nodes.filter((node):node is t.VariableDeclarator => node.type === 'VariableDeclarator')
+    const objectOrMemberExpression = nodes.filter((node):node is t.ObjectExpression | t.MemberExpression => node.type !== 'VariableDeclarator')
+    if (objectOrMemberExpression.length) {
+      const exportDefaultDeclaration = t.exportDefaultDeclaration(objectOrMemberExpression[0])
+      path.insertAfter(exportDefaultDeclaration)
+    }
     if (variableDeclaratorNodes.length) {
+      const variableDeclaration = t.variableDeclaration('const', variableDeclaratorNodes)
       path.replaceWith(t.exportNamedDeclaration(variableDeclaration, []))
     }
   }
@@ -109,8 +149,6 @@ export class CodeGen {
               }
               break
             case 'ExportNamedDeclaration':
-              // export { x } from 'module';
-              // export { y }
               if (this.dependencies.has(path.node.source?.value) || !path.node.declaration) {
                 this.overWriteExportNamedDeclaration(path as NodePath<t.ExportNamedDeclaration>, references)
               }
