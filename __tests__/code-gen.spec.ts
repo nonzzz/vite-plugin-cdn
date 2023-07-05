@@ -53,6 +53,16 @@ test('exports loose source and re named exported name', async (t) => {
   t.is(res.code, 'export const version = Vue.version;\nexport default Vue.version;')
 })
 
+test('exports loose source and export self module', async (t) => {
+  const code = 'import { version , ref } from \'vue\';\n const t = \'nonzzz\';\n export { t, version, ref as default };'
+  const scanner = createScanner(['vue'])
+  await scanner.scanAllDependencies()
+  const codeGen = createCodeGenerator()
+  codeGen.injectDependencies(scanner.dependencies)
+  const res = await codeGen.transform(code)
+  t.is(res.code, 'const t = \'nonzzz\';\nexport { t };\nconst version = Vue.version;\nexport default Vue.ref;')
+})
+
 test('exports with source', async (t) => {
   const code = 'export { ref , version } from \'vue\''
   const scanner = createScanner(['vue'])
@@ -79,7 +89,6 @@ test('exports with source and re named local name', async (t) => {
       enter: (path) => {
         path.node.key.type === 'Identifier' && keys.add(path.node.key.name)
       }
-
     }
   })
   t.is(keys.size, scanner.dependencies.get('vue').bindings.size)

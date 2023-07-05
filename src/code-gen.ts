@@ -109,17 +109,21 @@ export class CodeGen {
     // export {default as A } from 'module'
     // export { B as default } from 'module'
     // export { A , B } from 'module'
-    // const cap  = len(path.node.specifiers)
-  
     const variableDeclaratorNodes = nodes.filter((node):node is t.VariableDeclarator => node.type === 'VariableDeclarator')
     const objectOrMemberExpression = nodes.filter((node):node is t.ObjectExpression | t.MemberExpression => node.type !== 'VariableDeclarator')
-    if (objectOrMemberExpression.length) {
+    if (len(objectOrMemberExpression)) {
       const exportDefaultDeclaration = t.exportDefaultDeclaration(objectOrMemberExpression[0])
       path.insertAfter(exportDefaultDeclaration)
     }
-    if (variableDeclaratorNodes.length) {
+    if (len(variableDeclaratorNodes)) {
       const variableDeclaration = t.variableDeclaration('const', variableDeclaratorNodes)
-      path.replaceWith(t.exportNamedDeclaration(variableDeclaration, []))
+      if (len(natives)) {
+        const exportNamedDeclaration = t.exportNamedDeclaration(null, natives)
+        path.replaceWith(exportNamedDeclaration)
+        path.insertAfter(variableDeclaration)
+      } else {
+        path.replaceWith(t.exportNamedDeclaration(variableDeclaration, []))
+      }
     }
   }
 
