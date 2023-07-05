@@ -160,3 +160,13 @@ test('export all declaration', async (t) => {
   })
   t.is(size, scanner.dependencies.get('vue').bindings.size)
 })
+
+test('export with declaration', async (t) => {
+  const code = 'import { ref } from \'vue\';\nexport const value = ref(0);'
+  const scanner = createScanner(['vue'])
+  await scanner.scanAllDependencies()
+  const codeGen = createCodeGenerator()
+  codeGen.injectDependencies(scanner.dependencies)
+  const res = await codeGen.transform(code)
+  t.is(res.code, 'export const value = Vue.ref(0);')
+})

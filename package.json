@@ -7,7 +7,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "bump",
-    "test": "ava __tests__/code-gen.spec.ts",
+    "test": "ava __tests__/*.spec.ts",
     "lint": "eslint . --fix",
     "dev": "bump -w",
     "coverage": "c8 -r=lcov ava"
