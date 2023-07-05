@@ -7,10 +7,11 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "bump",
-    "test": "ava __tests__/*.spec.ts",
+    "test": "c8 -r=lcov ava __tests__/*.spec.ts",
     "lint": "eslint . --fix",
     "dev": "bump -w",
-    "coverage": "c8 -r=lcov ava"
+    "prepare:e2e": "cd e2e && npm run installer",
+    "e2e": "ava e2e/**/*.spec.ts"
   },
   "keywords": [
     "vite",
@@ -23,13 +24,13 @@
     "README.md",
     "LICENSE"
   ],
-  "exports":{
-    ".":{
+  "exports": {
+    ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
     },
-    "./url":{
+    "./url": {
       "import": "./dist/url.mjs",
       "require": "./dist/url.js"
     },
@@ -53,6 +54,7 @@
     "eslint": "^8.23.1",
     "eslint-config-kagura": "^1.1.0",
     "no-bump": "^0.7.1",
+    "playwright": "^1.35.1",
     "rollup-plugin-cleanup": "^3.2.1",
     "rollup-plugin-dts": "^5.0.0",
     "ts-node": "^10.9.1",
@@ -69,7 +71,8 @@
   },
   "ava": {
     "files": [
-      "__tests__/*.spec.ts"
+      "__tests__/*.spec.ts",
+      "e2e/**/*.spec.ts"
     ],
     "extensions": [
       "ts"

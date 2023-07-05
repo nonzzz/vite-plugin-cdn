@@ -189,15 +189,11 @@ export class CodeGen {
             case 'ExportNamedDeclaration':
               if (this.dependencies.has(path.node.source?.value) || !path.node.declaration) {
                 this.overWriteExportNamedDeclaration(path as NodePath<t.ExportNamedDeclaration>, references)
-              } else {
-                path.skip()
               }
               break
             case 'ExportAllDeclaration':
               if (this.dependencies.has(path.node.source.value)) {
                 this.overWriteExportAllDeclaration(path as NodePath<t.ExportAllDeclaration>)
-              } else {
-                path.skip()
               }
           }
         },
