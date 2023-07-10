@@ -6,8 +6,10 @@ import type { ModuleInfo } from './interface'
 
 export class CodeGen {
   private dependencies:Map<string, ModuleInfo>
+  private declarations:Map<string, NodePath<t.ClassDeclaration | t.VariableDeclaration | t.VariableDeclarator | t.FunctionDeclaration>>
   injectDependencies(dependencies:Map<string, ModuleInfo>) {
     this.dependencies = dependencies
+    this.declarations = new Map()
   }
 
   filter(code:string, id:string) {
@@ -196,9 +198,109 @@ export class CodeGen {
                 this.overWriteExportAllDeclaration(path as NodePath<t.ExportAllDeclaration>)
               }
           }
-        },
-        exit: (path) => {
-          // 
+        }
+      },
+      FunctionDeclaration: (path) => {
+        if (path.parent.type === 'Program' || path.parent.type === 'ExportNamedDeclaration' || path.parent.type === 'ExportDefaultDeclaration') {
+          const def = path.node.id.name
+          if (this.declarations.has(def)) {
+            const p = this.declarations.get(def)
+            p.remove()
+          } else {
+            this.declarations.set(def, path)
+          }
+        }
+      },
+      ClassDeclaration: (path) => {
+        if (path.parent.type === 'Program' || path.parent.type === 'ExportNamedDeclaration' || path.parent.type === 'ExportDefaultDeclaration') {
+          const def = path.node.id.name
+          if (this.declarations.has(def)) {
+            const p = this.declarations.get(def)
+            p.remove()
+          } else {
+            this.declarations.set(def, path)
+          }
+        }
+      },
+      VariableDeclaration: (path) => {
+        if (path.parent.type === 'Program' || path.parent.type === 'ExportNamedDeclaration' || path.parent.type === 'ExportDefaultDeclaration') {
+          const declarations = path.get('declarations')
+          for (const desc of declarations) {
+            const declarator = desc.node
+            if (t.isIdentifier(declarator.id)) {
+              const def = declarator.id.name
+              if (this.declarations.has(def)) {
+                const p = this.declarations.get(def)
+                p.remove()
+              } else {
+                this.declarations.set(def, desc)
+              }
+            }
+  
+            if (t.isObjectPattern(declarator.id)) {
+              for (const prop of declarator.id.properties) {
+                if (prop.type === 'ObjectProperty') {
+                  if (prop.key.type === 'Identifier') {
+                    const def = prop.key.name
+                    if (this.declarations.has(def)) {
+                      const p = this.declarations.get(def)
+                      p.remove()
+                    } else {
+                      this.declarations.set(def, desc)
+                    }
+                  }
+                } else {
+                  if (prop.argument.type === 'Identifier') {
+                    const def = prop.argument.name
+                    if (this.declarations.has(def)) {
+                      const p = this.declarations.get(def)
+                      p.remove()
+                    } else {
+                      this.declarations.set(def, desc)
+                    }
+                  }
+                }
+              }
+            }
+
+            if (t.isArrayPattern(declarator.id)) {
+              for (const prop of declarator.id.elements) {
+                if (prop.type === 'Identifier') {
+                  const def = prop.name
+                  if (this.declarations.has(def)) {
+                    const p = this.declarations.get(def)
+                    p.remove()
+                  } else {
+                    this.declarations.set(def, desc)
+                  }
+                }
+                if (prop.type === 'RestElement') {
+                  if (prop.argument.type === 'Identifier') {
+                    const def = prop.argument.name
+                    if (this.declarations.has(def)) {
+                      const p = this.declarations.get(def)
+                      p.remove()
+                    } else {
+                      this.declarations.set(def, desc)
+                    }
+                  }
+                  if (prop.argument.type === 'ArrayPattern') {
+                    for (const p of prop.argument.elements) {
+                      if (p.type === 'Identifier') {
+                        const def = p.name
+                        if (this.declarations.has(def)) {
+                          const p = this.declarations.get(def)
+                          p.remove()
+                        } else {
+                          this.declarations.set(def, desc)
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       },
       Identifier: (path) => {

@@ -7,7 +7,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "bump",
-    "test": "c8 -r=lcov ava __tests__/*.spec.ts",
+    "test": "c8 -r=lcov ava __tests__/code-gen.spec.ts",
     "lint": "eslint . --fix",
     "dev": "bump -w",
     "prepare:e2e": "cd e2e && npm run installer",

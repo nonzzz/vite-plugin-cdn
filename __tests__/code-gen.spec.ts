@@ -170,3 +170,14 @@ test('export with declaration', async (t) => {
   const res = await codeGen.transform(code)
   t.is(res.code, 'export const value = Vue.ref(0);')
 })
+
+
+test('export all module but the current module itself contains duplicated node', async (t) => {
+  const code = 'export * from \'vue\';\nexport const version = \'self\';'
+  const scanner = createScanner(['vue'])
+  await scanner.scanAllDependencies()
+  const codeGen = createCodeGenerator()
+  codeGen.injectDependencies(scanner.dependencies)
+  const res = await codeGen.transform(code)
+  t.is(/'self'/.test(res.code), true)
+})
