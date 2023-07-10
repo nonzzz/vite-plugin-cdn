@@ -13,7 +13,7 @@
 import { defineComponent } from 'vue'
 import axios from 'axios'
 import { useCounterStore } from './counter'
-import ref, { onMounted } from './api'
+import ref, { onMounted, version } from './api'
 
 export default defineComponent({
   setup() {
@@ -22,6 +22,7 @@ export default defineComponent({
 
     onMounted(() => {
       console.log('hello world')
+      console.log(version)
     })
 
     const clickHandler = () => {
