@@ -7,10 +7,11 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "bump",
-    "test": "ava __tests__/*.spec.ts",
+    "test": "c8 -r=lcov ava __tests__/code-gen.spec.ts",
     "lint": "eslint . --fix",
     "dev": "bump -w",
-    "coverage": "c8 -r=lcov ava"
+    "prepare:e2e": "cd e2e && npm run installer",
+    "e2e": "ava e2e/**/*.spec.ts"
   },
   "keywords": [
     "vite",
@@ -23,6 +24,18 @@
     "README.md",
     "LICENSE"
   ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./url": {
+      "import": "./dist/url.mjs",
+      "require": "./dist/url.js"
+    },
+    "./*": "./*"
+  },
   "author": "Kanno",
   "license": "MIT",
   "homepage": "https://github.com/nonzzz/vite-plugin-cdn",
@@ -35,11 +48,13 @@
   },
   "devDependencies": {
     "@rollup/plugin-json": "^6.0.0",
+    "@types/babel__core": "^7.20.1",
     "ava": "^5.2.0",
     "c8": "^7.12.0",
     "eslint": "^8.23.1",
     "eslint-config-kagura": "^1.1.0",
     "no-bump": "^0.7.1",
+    "playwright": "^1.35.1",
     "rollup-plugin-cleanup": "^3.2.1",
     "rollup-plugin-dts": "^5.0.0",
     "ts-node": "^10.9.1",
@@ -48,16 +63,16 @@
     "vue": "^3.2.47"
   },
   "dependencies": {
+    "@babel/core": "^7.22.5",
     "@rollup/pluginutils": "^5.0.2",
     "@types/estree": "^1.0.1",
-    "escodegen": "^2.0.0",
     "happy-dom": "^6.0.4",
-    "magic-string": "^0.26.4",
     "rs-module-lexer": "^1.0.0"
   },
   "ava": {
     "files": [
-      "__tests__/*.spec.ts"
+      "__tests__/*.spec.ts",
+      "e2e/**/*.spec.ts"
     ],
     "extensions": [
       "ts"

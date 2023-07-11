@@ -5,6 +5,7 @@ import Components from 'unplugin-vue-components/vite'
 import { cdn } from 'vite-plugin-cdn2'
 import Inspect from 'vite-plugin-inspect'
 
+
 export default defineConfig(({ command }) => {
   return {
     plugins: [

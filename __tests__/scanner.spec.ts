@@ -1,12 +1,16 @@
 import test from 'ava'
-import { createScanner } from '../dist'
+import { createScanner } from '../dist/scanner'
 
-async function expectScannerTest() {
+
+test('scanner dependencies', async (t) => {
   const scanner = createScanner(['vue'])
   await scanner.scanAllDependencies()
-  test('scanner dependencies', (t) => {
-    t.deepEqual(scanner.dependModuleNames, ['vue'])
-  })
-}
+  t.is(scanner.dependencies.has('vue'), true)
+})  
 
-expectScannerTest()
+test('scanner failed', async  (t) => {
+  const scanner = createScanner(['vue', 'react'])
+  await scanner.scanAllDependencies()
+  t.is(scanner.failedModule.has('react'), true)
+  t.is(scanner.dependencies.has('vue'), true)
+})

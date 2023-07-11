@@ -18,10 +18,9 @@ export interface TrackModule {
   spare?: Array<string> | string
 }
 
-export type PresetDomain = 'auto' | 'jsdelivr' | 'unpkg' | false
-
 export interface IIFEModuleInfo extends TrackModule {
   version: string
+  relativeModule: string
   unpkg?: string
   jsdelivr?: string
 }
@@ -32,7 +31,7 @@ export interface ModuleInfo extends IIFEModuleInfo{
 }
 
 export interface Serialization {
-  url?: string[]
+  url?: Set<string>
   type?: string
   name: string
   tag: 'link' | 'script'
@@ -81,8 +80,7 @@ export interface InjectVisitor {
 
 export interface CDNPluginOptions {
   modules?: Array<TrackModule | string>
-  preset?: PresetDomain
-  mode?: PresetDomain
+  url?: string
   transform?: () => InjectVisitor
   include?: FilterPattern
   exclude?: FilterPattern

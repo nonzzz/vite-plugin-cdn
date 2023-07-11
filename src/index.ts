@@ -1,16 +1,17 @@
 import { createFilter } from '@rollup/pluginutils'
 import { createScanner } from './scanner'
 import { createInjectScript } from './inject'
-import { createGenerator } from './generator'
+import { createCodeGenerator } from './code-gen'
 import { isSupportThreads  } from './shared'
+import { jsdelivr } from './url'
 import type { Plugin } from 'vite'
 import type { CDNPluginOptions } from './interface'
 
 function cdn(opts: CDNPluginOptions = {}): Plugin {
-  const { modules = [], mode = 'auto', include = /\.(mjs|js|ts|vue|jsx|tsx)(\?.*|)$/, exclude, logLevel = 'warn' } = opts
+  const { modules = [], url = jsdelivr, include = /\.(mjs|js|ts|vue|jsx|tsx)(\?.*|)$/, exclude, logLevel = 'warn' } = opts
   const filter = createFilter(include, exclude)
   const scanner = createScanner(modules)
-  const generator = createGenerator()
+  const generator = createCodeGenerator()
   return {
     name: 'vite-plugin-cdn',
     enforce: 'post',
@@ -22,7 +23,7 @@ function cdn(opts: CDNPluginOptions = {}): Plugin {
         await scanner.scanAllDependencies()
         generator.injectDependencies(scanner.dependencies)
         if (logLevel === 'warn') {
-          scanner.failedModuleNames.forEach((name) => config.logger.error(`vite-plugin-cdn2: ${name} resolved failed.Please check it.`))
+          scanner.failedModule.forEach((name) => config.logger.error(`vite-plugin-cdn2: ${name} resolved failed.Please check it.`))
         }
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
@@ -32,16 +33,16 @@ function cdn(opts: CDNPluginOptions = {}): Plugin {
     async transform(code, id) {
       if (!filter(id)) return
       if (!generator.filter(code, id)) return
-      return generator.overwrite(code, this)
+      return generator.transform(code)
     },
     transformIndexHtml(html) {
-      const inject = createInjectScript(scanner.dependencies, scanner.dependModuleNames, mode)
-      return inject.inject(html, opts.transform)
+      const inject = createInjectScript(scanner.dependencies, url)
+      return inject.text(html, opts.transform)
     }
   }
 }
 
-export { cdn, createScanner }
+export { cdn }
 export default cdn
 
-export type { InjectVisitor, PresetDomain, TrackModule, CDNPluginOptions } from './interface'
+export type { InjectVisitor, TrackModule, CDNPluginOptions } from './interface'

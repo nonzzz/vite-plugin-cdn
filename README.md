@@ -51,7 +51,7 @@ export interface CDNPluginOptions {
    *auto will read the package.json has unpkg or jsdelivr path. If not willn't be
    * repalce. set false you can define spare for each module.
    */
-  mode?: PresetDomain
+  url?: string
   include?: FilterPattern
   exclude?: FilterPattern
   /**

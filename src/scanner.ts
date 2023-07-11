@@ -1,15 +1,15 @@
 import fsp from 'fs/promises'
 import worker_threads from 'worker_threads'
 import { createConcurrentQueue, createVM, MAX_CONCURRENT } from './vm'
-import { is, lookup, uniq } from './shared'
+import { is, len, lookup, uniq } from './shared'
 import type { MessagePort } from 'worker_threads'
 import type { TrackModule, IIFEModuleInfo, ModuleInfo } from './interface'
 
-interface WorkerData {
-  scannerModule: TrackModule[]
-  workerPort: MessagePort
-  internalThread: boolean
-}
+  interface WorkerData {
+    scannerModule: TrackModule[]
+    workerPort: MessagePort
+    internalThread: boolean
+  }
 
 function createWorkerThreads(scannerModule: TrackModule[]) {
   const { port1: mainPort, port2: workerPort } = new worker_threads.MessageChannel()
@@ -19,67 +19,58 @@ function createWorkerThreads(scannerModule: TrackModule[]) {
     transferList: [workerPort],
     execArgv: []
   })
-  // record thread id
   const id = 0
   const run = () => {
     worker.postMessage({ id })
     return new Promise((resolve, reject) => {
       mainPort.on('message', (message) => {
         if (message.id !== id) reject(new Error(`Internal error: Expected id ${id} but got id ${message.id}`))
-        resolve(message.bindings)
+        if (message.error) {
+          reject(message.error)
+        } else {
+          resolve({ dependencies: message.bindings, failedModule: message.failedModule })
+        }
         worker.terminate()
       })
     })
   }
-  return run() as Promise<Record<string, ModuleInfo>>
+  return run() as Promise<{dependencies:Map<string, ModuleInfo>, failedModule:Set<string>}>
 }
 
 async function tryResolveModule(
   module: TrackModule,
-  dependenciesMap:Map<string, ModuleInfo>
+  dependenciesMap: Map<string, ModuleInfo>,
+  failedModule: Set<string>
 ) {
   const { name: moduleName, ...rest } = module
-
-  const packageJson: IIFEModuleInfo & { browser: string } = Object.create(null)
-  let packageJsonPath = ''
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    Object.assign(packageJson, require(`${moduleName}/package.json`))
-    packageJsonPath = require.resolve(`${moduleName}/package.json`)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } catch (error: any) {
-    // handle esm package
-    if (error.code === 'ERR_PACKAGE_PATH_NOT_EXPORTED') {
-      const modulePath = require.resolve(moduleName)
-      packageJsonPath = lookup(modulePath, 'package.json')
-      const str = await fsp.readFile(packageJsonPath, 'utf8')
-      Object.assign(packageJson, JSON.parse(str))
+    const modulePath = require.resolve(moduleName)
+    const packageJsonPath = lookup(modulePath, 'package.json')
+    const str = await fsp.readFile(packageJsonPath, 'utf8')
+    const packageJSON:IIFEModuleInfo = JSON.parse(str)
+    const { version, name, unpkg, jsdelivr } = packageJSON
+    const meta:ModuleInfo = Object.create(null)
+    const iifeRelativePath = jsdelivr || unpkg
+    if (!iifeRelativePath) throw new Error('try resolve file failed.')
+    if (rest.global) {
+      Object.assign(meta, { name, version, relativeModule: iifeRelativePath, ...rest })
     } else {
-      throw new Error('Internal error:' + error)
+      const iifeFilePath = lookup(packageJsonPath, iifeRelativePath)
+      const code = await fsp.readFile(iifeFilePath, 'utf8')
+      Object.assign(meta, { name, version, code, relativeModule: iifeRelativePath, ...rest })
     }
-  }
-  // https://docs.npmjs.com/cli/v9/configuring-npm/package-json#browser
-  const { version, name, unpkg, jsdelivr, browser } = packageJson
-  // if user prvoide the global name . Skip eval script
-  if (rest.global) {
-    dependenciesMap.set(name, { name, version, unpkg, jsdelivr, bindings: new Set(), ...rest  })
-  } else {
-    const iifeRelativePath = typeof browser === 'string' ? browser : jsdelivr ?? unpkg
-    if (!iifeRelativePath) return
-    const iifeFilePath = lookup(packageJsonPath, iifeRelativePath)
-    const code = await fsp.readFile(iifeFilePath, 'utf8')
-    dependenciesMap.set(name, { name, version, unpkg, jsdelivr, code, bindings: new Set(), ...rest })
-  }
-  const pkg = await import(moduleName)
-  const keys = Object.keys(pkg)
-  if (keys.includes('default')) {
-    const pos = keys.findIndex((k) => k === 'default')
-    keys.splice(pos, 1)
-    keys.push(...Object.keys(pkg.default))
-  }
-
-  if (dependenciesMap.has(name)) {
-    dependenciesMap.get(name).bindings = new Set(keys.filter((k) => k !== '__esModule'))
+    const pkg = await import(moduleName)
+    const keys = Object.keys(pkg)
+    // If it's only exports by default
+    if (keys.includes('default') && len(keys) !== 1) {
+      const pos = keys.findIndex((k) => k === 'default')
+      keys.splice(pos, 1)
+      keys.push(...Object.keys(pkg.default))
+    }
+    const bindings = new Set(keys.filter(v => v !== '__esModule'))
+    dependenciesMap.set(name, { ...meta, bindings })
+  } catch (error) {
+    failedModule.add(moduleName)
   }
 }
 
@@ -89,38 +80,33 @@ function startAsyncThreads() {
   const { parentPort } = worker_threads
   const vm = createVM()
   const dependenciesMap: Map<string, ModuleInfo> = new Map()
+  const failedModule: Set<string> = new Set()
   parentPort?.on('message', (msg) => {
     (async () => {
       const { id } = msg
-      // An Idea. We won't need ensure the task order.
-      // We only need two tasks. First is the import module.(Node.js has implement  `import('module')`)
-      // The second is find the global name of umd or iife file. (If user pass the global. Skip find global name)
-      // If this process is ok. we don't need collect bindings in trasnform stage. :)
       try {
         const queue = createConcurrentQueue(MAX_CONCURRENT)
         for (const module of scannerModule) {
-          queue.enqueue(() => tryResolveModule(module, dependenciesMap))
+          queue.enqueue(() => tryResolveModule(module, dependenciesMap, failedModule))
         }
-        // 
         await queue.wait()
         for (const module of scannerModule) {
           const { name } = module
           if (dependenciesMap.has(name)) {
             const { code, ...rest } =  dependenciesMap.get(name)
             if (!code) {
-              vm.bindings[name] = rest
+              vm.bindings.set(name, rest)
               continue
             }
-            vm.run(code, rest, (info) => {
-              if (!info.unpkg && !info.jsdelivr) return null
-              return info
+            vm.run(code, rest, (err:Error) => {
+              failedModule.add(err.message)
             })
           }
         }
         dependenciesMap.clear()
-        workerPort.postMessage({ bindings: vm.bindings, id  })
+        workerPort.postMessage({ bindings: vm.bindings, id, failedModule })
       } catch (error) {
-        //
+        workerPort.postMessage({ error, id })
       }
     })()
   })
@@ -132,14 +118,19 @@ if (worker_threads.workerData?.internalThread) {
 
 class Scanner {
   modules: Array<TrackModule>
-  dependencies: Record<string, ModuleInfo>
+  dependencies: Map<string, ModuleInfo>
+  failedModule: Set<string>
   constructor(modules: Array<TrackModule | string>) {
     this.modules = this.serialization(modules)
-    this.dependencies = {}
+    this.dependencies = new Map()
+    this.failedModule = new Set()
   }
 
   public async scanAllDependencies() {
-    this.dependencies = await createWorkerThreads(this.modules)
+    // we won't throw any exceptions inside this task.
+    const res = await createWorkerThreads(this.modules)
+    this.dependencies = res.dependencies
+    this.failedModule = res.failedModule
   }
 
   private serialization(modules: Array<TrackModule | string>) {
@@ -150,21 +141,6 @@ class Scanner {
         return module
       })
       .filter((v) => v.name)
-  }
-
-  // ensure the order
-  get dependModuleNames() {
-    const deps = Object.keys(this.dependencies)
-    return this.modules.map((v) => v.name).filter((v) => deps.includes(v))
-  }
-
-  get failedModuleNames() {
-    const failedModules:string[] = []
-    this.modules.forEach((module) => {
-      if (module.name in this.dependencies) return
-      failedModules.push(module.name)
-    })
-    return failedModules
   }
 }
 
