@@ -4,6 +4,11 @@ import { len } from './shared'
 import type { NodePath } from '@babel/core'
 import type { ModuleInfo } from './interface'
 
+
+function isTopLevelCalled(p:NodePath) {
+  return t.isProgram(p.parent) || t.isExportDefaultDeclaration(p.parent) || t.isExportNamedDeclaration(p.parent)
+}
+
 export class CodeGen {
   private dependencies:Map<string, ModuleInfo>
   injectDependencies(dependencies:Map<string, ModuleInfo>) {
@@ -161,10 +166,47 @@ export class CodeGen {
     }
   }
 
+  private eraseDuplicatedVariableDeclaration(paths: NodePath<t.Node> | NodePath<t.Node>[], declarations: Map<string, NodePath<t.Declaration | t.Node>>) {
+    if (!Array.isArray(paths)) return
+    const traverseNode = (path: NodePath<t.Node> | Array<NodePath<t.Node>>) => {
+      if (Array.isArray(path)) return
+      if (t.isVariableDeclarator(path.node)) {
+        if (t.isObjectPattern(path.node.id) || t.isArrayPattern(path.node.id)) {
+          traverseNode(path.get('node.id'))
+        }
+        if (t.isRestElement(path.node.id)) {
+          traverseNode(path.get('node.id.argument'))
+        }
+        if (t.isIdentifier(path.node.id)) {
+          const def = path.node.id.name
+          if (declarations.has(def)) {
+            const p = declarations.get(def)
+            p.remove()
+          }
+          declarations.set(def, path)
+          return
+        }
+      }
+      if (t.isObjectPattern(path.node)) {
+        for (const prop of path.get('properties') as Array<NodePath<t.Node>>) {
+          traverseNode(prop)
+        }
+      }
+      if (t.isArrayPattern(path.node)) {
+        for (const element of path.get('elements') as Array<NodePath<t.Node>>) {
+          traverseNode(element)
+        }
+      }
+    }
+    for (const path of paths) {
+      traverseNode(path)
+    }
+  }
+
   async transform(code:string) {
     const ast = await babelParse(code, { babelrc: false, configFile: false })
     const references:Map<string, string> = new Map()
-    const declarations:Map<string, NodePath<t.ClassDeclaration | t.VariableDeclaration | t.VariableDeclarator | t.FunctionDeclaration>> = new Map()
+    const declarations:Map<string, NodePath<t.Declaration | t.Node>> = new Map()
     traverse(ast, {
       ImportDeclaration: {
         enter: (path) => {
@@ -183,7 +225,7 @@ export class CodeGen {
         enter: (path) => {
           switch (path.node.type) {
             case 'ExportDefaultDeclaration':
-              if (path.node.declaration.type === 'Identifier' && this.dependencies.has(path.node.declaration.name)) {
+              if (t.isIdentifier(path.node.declaration) && this.dependencies.has(path.node.declaration.name)) {
                 path.remove()
               }
               break
@@ -199,107 +241,18 @@ export class CodeGen {
           }
         }
       },
-      FunctionDeclaration: (path) => {
-        if (path.parent.type === 'Program' || path.parent.type === 'ExportNamedDeclaration' || path.parent.type === 'ExportDefaultDeclaration') {
+      Declaration: (path) => {
+        if (!isTopLevelCalled(path)) return
+        if (t.isClassDeclaration(path.node) || t.isFunctionDeclaration(path.node)) {
           const def = path.node.id.name
           if (declarations.has(def)) {
             const p = declarations.get(def)
             p.remove()
-          } else {
-            declarations.set(def, path)
           }
+          declarations.set(def, path)
         }
-      },
-      ClassDeclaration: (path) => {
-        if (path.parent.type === 'Program' || path.parent.type === 'ExportNamedDeclaration' || path.parent.type === 'ExportDefaultDeclaration') {
-          const def = path.node.id.name
-          if (declarations.has(def)) {
-            const p = declarations.get(def)
-            p.remove()
-          } else {
-            declarations.set(def, path)
-          }
-        }
-      },
-      VariableDeclaration: (path) => {
-        if (path.parent.type === 'Program' || path.parent.type === 'ExportNamedDeclaration' || path.parent.type === 'ExportDefaultDeclaration') {
-          const _declarations = path.get('declarations')
-          for (const desc of _declarations) {
-            const declarator = desc.node
-            if (t.isIdentifier(declarator.id)) {
-              const def = declarator.id.name
-              if (declarations.has(def)) {
-                const p = declarations.get(def)
-                p.remove()
-              } else {
-                declarations.set(def, desc)
-              }
-            }
-  
-            if (t.isObjectPattern(declarator.id)) {
-              for (const prop of declarator.id.properties) {
-                if (prop.type === 'ObjectProperty') {
-                  if (prop.key.type === 'Identifier') {
-                    const def = prop.key.name
-                    if (declarations.has(def)) {
-                      const p = declarations.get(def)
-                      p.remove()
-                    } else {
-                      declarations.set(def, desc)
-                    }
-                  }
-                } else {
-                  if (prop.argument.type === 'Identifier') {
-                    const def = prop.argument.name
-                    if (declarations.has(def)) {
-                      const p = declarations.get(def)
-                      p.remove()
-                    } else {
-                      declarations.set(def, desc)
-                    }
-                  }
-                }
-              }
-            }
-
-            if (t.isArrayPattern(declarator.id)) {
-              for (const prop of declarator.id.elements) {
-                if (prop.type === 'Identifier') {
-                  const def = prop.name
-                  if (declarations.has(def)) {
-                    const p = declarations.get(def)
-                    p.remove()
-                  } else {
-                    declarations.set(def, desc)
-                  }
-                }
-                if (prop.type === 'RestElement') {
-                  if (prop.argument.type === 'Identifier') {
-                    const def = prop.argument.name
-                    if (declarations.has(def)) {
-                      const p = declarations.get(def)
-                      p.remove()
-                    } else {
-                      declarations.set(def, desc)
-                    }
-                  }
-                  if (prop.argument.type === 'ArrayPattern') {
-                    for (const p of prop.argument.elements) {
-                      if (p.type === 'Identifier') {
-                        const def = p.name
-                        if (declarations.has(def)) {
-                          const p = declarations.get(def)
-                          p.remove()
-                        } else {
-                          declarations.set(def, desc)
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
+        if (t.isVariableDeclaration(path.node)) {
+          this.eraseDuplicatedVariableDeclaration(path.get('declarations'), declarations)
         }
       },
       Identifier: (path) => {
