@@ -71,9 +71,10 @@ Thanks to [JetBrains](https://www.jetbrains.com/) for allocating free open-sourc
 </p>
 
 
-### Q & A
+### Document
 
-see [Architecture](./Architecture.md)
+- [Background](./docs/Background.md)
+- [How it works](./docs/How-it-works.md)
 
 ### LICENSE
 
