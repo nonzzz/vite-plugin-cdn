@@ -1,3 +1,12 @@
+## 0.6.0
+
+# Background
+
+### Features & Improves
+
+- Supprot `export * from 'module'`
+- Using `babel` replace magic str
+
 ## 0.3.3
 
 # Background
