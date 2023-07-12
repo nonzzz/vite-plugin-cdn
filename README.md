@@ -42,25 +42,15 @@ export default defineConfig({
 
 ### Options
 
-```ts
-export type PresetDomain = 'auto' | 'jsdelivr' | 'unpkg' | false
+| params                 | type                                          | default           | description                                                    |
+| ---------------------- | --------------------------------------------- | ----------------- | -------------------------------------------------------------- |
+| `include`              | `string \| RegExp \| Array<string \| RegExp>` | `/\.(mjs|js|ts|vue|jsx|tsx)(\?.*|)$/`               | Include all assets matching any of these conditions.           |
+| `exclude`              | `string \| RegExp \| Array<string \| RegExp>` | `-`               | Exclude all assets matching any of these conditions.           |
+| `url`            | `string`                                      | `jsdelivr`               | cdn source url    |
+| `modules`            | `Array<string>\| Array<TrackModule>`                           | `[]`            | modules to be processed                                    |
+| `transform`   | `()=>InjectVisitor`                          | `-`              | Transform can replace the capture result. and rewrite them. |
+| `logLevel`             | `'slient'|'warn'`                                      | `warn` |  Adjust console output verbosity                                   |
 
-export interface CDNPluginOptions {
-  modules?: Array<TrackModule | string>
-  /**
-   *auto will read the package.json has unpkg or jsdelivr path. If not willn't be
-   * repalce. set false you can define spare for each module.
-   */
-  url?: string
-  include?: FilterPattern
-  exclude?: FilterPattern
-  /**
-   * Transform can replace the capture result. and rewrite them.
-   */
-  transform?: () => InjectVisitor
-  logLevel?:  "slient" | "warn"
-}
-```
 
 ### Acknowledgements
 

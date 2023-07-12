@@ -42,7 +42,11 @@ async function dynamicImport () {
     return react
 }
 
-
 ```
 
 In most of case, we won't use dynamic import to introduce some libraries.
+
+### Use export all as little as possible
+
+Although we support `export * from 'module'`. But in most of case we don't encourage
+users to use it. Because it's a long transform task. And we only handle the duplicate node(Just remove duplicate node)
