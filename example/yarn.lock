@@ -1463,13 +1463,20 @@ util-deprecate@~1.0.1:
   integrity sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==
 
 "vite-plugin-cdn2@file:..":
-  version "0.5.1"
+  version "0.6.0"
   dependencies:
     "@babel/core" "^7.22.5"
     "@rollup/pluginutils" "^5.0.2"
     "@types/estree" "^1.0.1"
     happy-dom "^6.0.4"
     rs-module-lexer "^1.0.0"
+
+vite-plugin-compression2@^0.10.2:
+  version "0.10.2"
+  resolved "https://registry.yarnpkg.com/vite-plugin-compression2/-/vite-plugin-compression2-0.10.2.tgz#2a60564e50118c57eb7531d1c3088d35daac879d"
+  integrity sha512-PARrZawHL0uc6Dt788eUHZcd+MS6JB24YFN5ubfICyhCdrJS84W5GDtytzgC5z2VmCfDRorfdk5SXf+AqAX3Uw==
+  dependencies:
+    "@rollup/pluginutils" "^5.0.2"
 
 vite-plugin-inspect@^0.7.26:
   version "0.7.26"

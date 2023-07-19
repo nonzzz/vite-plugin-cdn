@@ -14,11 +14,12 @@ function makeURL(moduleMeta: IIFEModuleInfo, baseURL:string) {
   return new URL(`${packageName}@${version}/${relativeModule}`, baseURL).href
 }
 
-function makeNode(packageName:string):ScriptNode | LinkNode {
+function makeNode(moduleInfo:IIFEModuleInfo):ScriptNode | LinkNode {
   return {
     tag: 'link',
     url: new Set(),
-    name: packageName
+    name: moduleInfo.name,
+    extra: moduleInfo
   }
 }
 
@@ -35,7 +36,7 @@ class InjectScript {
     const tags = []
     this.modules.forEach((node) => {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { tag, url, name: _, ...restProps } = node
+      const { tag, url, name: _, extra: __, ...restProps } = node
       if (url.size) {
         url.forEach((l) => {
           const element = this.window.document.createElement(tag)
@@ -76,7 +77,7 @@ class InjectScript {
     const container:Map<string, LinkNode | ScriptNode> = new Map()
 
     const traverseModule = (moduleMeta: IIFEModuleInfo, moduleName: string) => {
-      const { spare, name: packageName } = moduleMeta
+      const { spare  } = moduleMeta
       if (!spare) return
       if (Array.isArray(spare)) {
         for (const s of uniq(spare)) {
@@ -91,20 +92,20 @@ class InjectScript {
         node.url.add(spare)
         return
       }
-      const node = makeNode(packageName)
+      const node = makeNode(moduleMeta)
       node.url.add(spare)
       node.tag = isScript(spare)
       container.set(mark, node)
     }
 
     modules.forEach((meta, moduleName) => {
-      const node = makeNode(meta.name)
+      const node = makeNode(meta)
       const url = makeURL(meta, baseURL)
       node.url.add(url)
       node.tag = isScript(url)
       const mark = `__${moduleName}__${node.tag}__`
       container.set(mark, node)
-      if (meta.spare)  traverseModule(meta, moduleName)
+      if (meta.spare) traverseModule(meta, moduleName)
     })
     return container
   }

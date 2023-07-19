@@ -35,6 +35,7 @@ export interface Serialization {
   type?: string
   name: string
   tag: 'link' | 'script'
+  extra:Record<string, any>
 }
 
 

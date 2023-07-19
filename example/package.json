@@ -10,6 +10,7 @@
     "unplugin-vue-components": "^0.24.1",
     "vite": "^4",
     "vite-plugin-cdn2": "file:../",
+    "vite-plugin-compression2":"^0.10.2",
     "vite-plugin-inspect": "^0.7.26"
   },
   "dependencies": {

@@ -9,11 +9,6 @@ export function lookup(entry: string, target: string): string {
   return lookup(dir, target)
 }
 
-// eslint-disable-next-line @typescript-eslint/ban-types
-export function hasOwn<T extends { [key: string]: unknown }>(obj: T, key: keyof T | (string & {})): boolean {
-  return Object.hasOwnProperty.call(obj, key)
-}
-
 export function len<T extends ArrayLike<unknown>>(source: T) {
   return source.length
 }
