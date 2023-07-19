@@ -1,3 +1,9 @@
+## 0.7.0
+
+### Features & Improves
+
+- node set extra info.
+
 ## 0.6.0
 
 # Background
