@@ -11,6 +11,6 @@ test('scanner dependencies', async (t) => {
 test('scanner failed', async  (t) => {
   const scanner = createScanner(['vue', 'react'])
   await scanner.scanAllDependencies()
-  t.is(scanner.failedModule.has('react'), true)
+  t.is(scanner.failedModules.has('react'), true)
   t.is(scanner.dependencies.has('vue'), true)
 })

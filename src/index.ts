@@ -23,7 +23,7 @@ function cdn(opts: CDNPluginOptions = {}): Plugin {
         await scanner.scanAllDependencies()
         generator.injectDependencies(scanner.dependencies)
         if (logLevel === 'warn') {
-          scanner.failedModule.forEach((name) => config.logger.error(`vite-plugin-cdn2: ${name} resolved failed.Please check it.`))
+          scanner.failedModules.forEach((errorMessage, name) => config.logger.error(`vite-plugin-cdn2: ${name} ${errorMessage ? errorMessage : 'resolved failed.Please check it.'}`))
         }
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {

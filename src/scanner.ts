@@ -5,11 +5,18 @@ import { is, len, lookup, uniq } from './shared'
 import type { MessagePort } from 'worker_threads'
 import type { TrackModule, IIFEModuleInfo, ModuleInfo } from './interface'
 
-  interface WorkerData {
+// This file is a simply dependencies scanner.
+// We won't throw any error unless it's an internal thread error(such as pid not equal)
+// we consume all expection modules in the plugin itself.
+// Notice. This file don't handle any logic with script inject.
+// If we implement option url for each module. It just a pre check to
+// prevent missing parse.
+
+interface WorkerData {
     scannerModule: TrackModule[]
     workerPort: MessagePort
     internalThread: boolean
-  }
+}
 
 function createWorkerThreads(scannerModule: TrackModule[]) {
   const { port1: mainPort, port2: workerPort } = new worker_threads.MessageChannel()
@@ -28,19 +35,19 @@ function createWorkerThreads(scannerModule: TrackModule[]) {
         if (message.error) {
           reject(message.error)
         } else {
-          resolve({ dependencies: message.bindings, failedModule: message.failedModule })
+          resolve({ dependencies: message.bindings, failedModules: message.failedModules })
         }
         worker.terminate()
       })
     })
   }
-  return run() as Promise<{dependencies:Map<string, ModuleInfo>, failedModule:Set<string>}>
+  return run() as Promise<{dependencies:Map<string, ModuleInfo>, failedModules:Map<string, string>}>
 }
 
 async function tryResolveModule(
   module: TrackModule,
   dependenciesMap: Map<string, ModuleInfo>,
-  failedModule: Set<string>
+  failedModules: Map<string, string>
 ) {
   const { name: moduleName, ...rest } = module
   try {
@@ -70,7 +77,18 @@ async function tryResolveModule(
     const bindings = new Set(keys.filter(v => v !== '__esModule'))
     dependenciesMap.set(name, { ...meta, bindings })
   } catch (error) {
-    failedModule.add(moduleName)
+    const message = (() => {
+      if (error instanceof Error) {
+        if ('code' in error) {
+          if (error.code === 'MODULE_NOT_FOUND') {
+            return `can't find module '${moduleName}'.`
+          }
+        }
+        return error.message
+      }
+      return error
+    })()
+    failedModules.set(moduleName, message)
   }
 }
 
@@ -80,14 +98,14 @@ function startAsyncThreads() {
   const { parentPort } = worker_threads
   const vm = createVM()
   const dependenciesMap: Map<string, ModuleInfo> = new Map()
-  const failedModule: Set<string> = new Set()
+  const failedModules:Map<string, string> = new Map()
   parentPort?.on('message', (msg) => {
     (async () => {
       const { id } = msg
       try {
         const queue = createConcurrentQueue(MAX_CONCURRENT)
         for (const module of scannerModule) {
-          queue.enqueue(() => tryResolveModule(module, dependenciesMap, failedModule))
+          queue.enqueue(() => tryResolveModule(module, dependenciesMap, failedModules))
         }
         await queue.wait()
         for (const module of scannerModule) {
@@ -99,12 +117,12 @@ function startAsyncThreads() {
               continue
             }
             vm.run(code, rest, (err:Error) => {
-              failedModule.add(err.message)
+              failedModules.set(err.message, 'try resolve global name failed.')
             })
           }
         }
         dependenciesMap.clear()
-        workerPort.postMessage({ bindings: vm.bindings, id, failedModule })
+        workerPort.postMessage({ bindings: vm.bindings, id, failedModules })
       } catch (error) {
         workerPort.postMessage({ error, id })
       }
@@ -119,18 +137,18 @@ if (worker_threads.workerData?.internalThread) {
 class Scanner {
   modules: Array<TrackModule>
   dependencies: Map<string, ModuleInfo>
-  failedModule: Set<string>
+  failedModules: Map<string, string>
   constructor(modules: Array<TrackModule | string>) {
     this.modules = this.serialization(modules)
     this.dependencies = new Map()
-    this.failedModule = new Set()
+    this.failedModules = new Map()
   }
 
   public async scanAllDependencies() {
     // we won't throw any exceptions inside this task.
     const res = await createWorkerThreads(this.modules)
     this.dependencies = res.dependencies
-    this.failedModule = res.failedModule
+    this.failedModules = res.failedModules
   }
 
   private serialization(modules: Array<TrackModule | string>) {
