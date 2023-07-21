@@ -2,19 +2,32 @@
 import { URL } from 'url'
 import { Window } from 'happy-dom'
 import { uniq } from './shared'
-import type { IIFEModuleInfo, CDNPluginOptions, ScriptNode, LinkNode } from './interface'
+import type { CDNPluginOptions, ScriptNode, LinkNode, ModuleInfo, URLFunction } from './interface'
 
 function isScript(url: string) {
   return url.split('.').pop() === 'js' ? 'script' : 'link'
 }
 
-function makeURL(moduleMeta: IIFEModuleInfo, baseURL:string) {
-  const { version, name: packageName, relativeModule } = moduleMeta
-  if (!baseURL) return
-  return new URL(`${packageName}@${version}/${relativeModule}`, baseURL).href
+interface Options {
+  extra: ModuleInfo,
+  baseURL: string
 }
 
-function makeNode(moduleInfo:IIFEModuleInfo):ScriptNode | LinkNode {
+// [baseURL][version][name]
+function replaceURL(p: string, url: string | URLFunction, options: Options) {
+  const template = typeof url === 'function' ? url(p, options.extra) : url
+  return template.replace(/\[version\]/, options.extra.version).replace(/\[baseURL\]/, options.baseURL).replace(/\[name\]/, options.extra.name)
+}
+
+function makeURL(moduleMeta: ModuleInfo, baseURL: string) {
+  const { version, name: packageName, relativeModule, url: userURL } = moduleMeta
+  if (!baseURL) return
+  const u = new URL(`${packageName}@${version}/${relativeModule}`, baseURL).href
+  if (userURL) return replaceURL(u, userURL, { extra: moduleMeta, baseURL })
+  return u
+}
+
+function makeNode(moduleInfo: ModuleInfo): ScriptNode | LinkNode {
   return {
     tag: 'link',
     url: new Set(),
@@ -24,10 +37,9 @@ function makeNode(moduleInfo:IIFEModuleInfo):ScriptNode | LinkNode {
 }
 
 class InjectScript {
-  private modules:Map<string, LinkNode | ScriptNode>
-
+  private modules: Map<string, LinkNode | ScriptNode>
   private window: Window
-  constructor(modules: Map<string, IIFEModuleInfo>, url: string) {
+  constructor(modules: Map<string, ModuleInfo>, url: string) {
     this.modules = this.prepareSource(modules, url)
     this.window = new Window()
   }
@@ -73,11 +85,11 @@ class InjectScript {
     return document.body.innerHTML
   }
 
-  private prepareSource(modules: Map<string, IIFEModuleInfo>, baseURL: string) {
-    const container:Map<string, LinkNode | ScriptNode> = new Map()
+  private prepareSource(modules: Map<string, ModuleInfo>, baseURL: string) {
+    const container: Map<string, LinkNode | ScriptNode> = new Map()
 
-    const traverseModule = (moduleMeta: IIFEModuleInfo, moduleName: string) => {
-      const { spare  } = moduleMeta
+    const traverseModule = (moduleMeta: ModuleInfo, moduleName: string) => {
+      const { spare } = moduleMeta
       if (!spare) return
       if (Array.isArray(spare)) {
         for (const s of uniq(spare)) {
@@ -101,6 +113,7 @@ class InjectScript {
     modules.forEach((meta, moduleName) => {
       const node = makeNode(meta)
       const url = makeURL(meta, baseURL)
+      if (!url) return
       node.url.add(url)
       node.tag = isScript(url)
       const mark = `__${moduleName}__${node.tag}__`
@@ -112,7 +125,7 @@ class InjectScript {
 }
 
 export function createInjectScript(
-  dependModules: Map<string, IIFEModuleInfo>,
+  dependModules: Map<string, ModuleInfo>,
   url: string
 ) {
   return new InjectScript(dependModules, url)

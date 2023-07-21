@@ -25,8 +25,7 @@ function cdn(opts: CDNPluginOptions = {}): Plugin {
         if (logLevel === 'warn') {
           scanner.failedModules.forEach((errorMessage, name) => config.logger.error(`vite-plugin-cdn2: ${name} ${errorMessage ? errorMessage : 'resolved failed.Please check it.'}`))
         }
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } catch (error: any) {
+      } catch (error) {
         config.logger.error(error)
       }
     },

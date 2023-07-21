@@ -5,14 +5,14 @@ import { len } from './shared'
 import type { ModuleInfo } from './interface'
 
 export function createVM() {
-  const bindings:Map<string, ModuleInfo>  = new Map()
+  const bindings: Map<string, ModuleInfo>  = new Map()
   const window = new Window()
   const context = vm.createContext({})
-  let _meta:ModuleInfo = null
+  let _meta: ModuleInfo = null
   let id = 0
   let callerId = 0
 
-  const updateBindings  = (name:string, meta:ModuleInfo) => {
+  const updateBindings  = (name: string, meta: ModuleInfo) => {
     bindings.set(meta.name, { ...meta, global: name }) 
   }
   const shadow = new Proxy(window, {
@@ -24,7 +24,7 @@ export function createVM() {
     }
   })
 
-  const run = (code: string, meta: ModuleInfo, handler:(err:Error)=>void) => {
+  const run = (code: string, meta: ModuleInfo, handler: (err: Error)=> void) => {
     _meta = meta
     try {
       vm.runInContext(code, context)
@@ -64,7 +64,7 @@ export const MAX_CONCURRENT = (() => {
 
 class Queue {
   maxConcurrent: number
-  queue: Array<() => Promise<void>>
+  queue: Array<()=> Promise<void>>
   running: number
   errors: Error[]
   constructor(maxConcurrent: number) {
@@ -74,7 +74,7 @@ class Queue {
     this.errors = []
   }
 
-  enqueue(task: () => Promise<void>) {
+  enqueue(task: ()=> Promise<void>) {
     this.queue.push(task)
     this.run()
   }

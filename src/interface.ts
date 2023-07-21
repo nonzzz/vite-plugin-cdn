@@ -1,33 +1,28 @@
-import type { Plugin } from 'vite'
 import type { FilterPattern } from '@rollup/pluginutils'
-
-
-// eslint-disable-next-line @typescript-eslint/ban-types
-type ObjectHook<T, O = {}> = T | ({ handler: T; order?: 'pre' | 'post' | null } & O);
-
-
-type HookHandler<T> = T extends ObjectHook<infer H> ? H : T
-
-
-export type RollupTransformHookContext = ThisParameterType<NonNullable<HookHandler<Plugin['transform']>>>
-
 
 export interface TrackModule {
   name: string
   global?: string
   spare?: Array<string> | string
+  relativeModule?: string
 }
 
 export interface IIFEModuleInfo extends TrackModule {
   version: string
-  relativeModule: string
   unpkg?: string
   jsdelivr?: string
 }
 
+export type URLFunction = (p: string, extra: IIFEModuleInfo)=> string
+
 export interface ModuleInfo extends IIFEModuleInfo{
-  bindings:Set<string>
-  code?:string
+  bindings: Set<string>
+  code?: string
+  url?: string | URLFunction
+}
+
+export interface IModule extends TrackModule{
+  [prop: string]: any
 }
 
 export interface Serialization {
@@ -35,7 +30,7 @@ export interface Serialization {
   type?: string
   name: string
   tag: 'link' | 'script'
-  extra:Record<string, any>
+  extra: Record<string, any>
 }
 
 
@@ -75,16 +70,16 @@ export type LinkNode = LinkAttrobites &
   }
 
 export interface InjectVisitor {
-  script?: (node: ScriptNode) => void
-  link?: (node: LinkNode) => void
+  script?: (node: ScriptNode)=> void
+  link?: (node: LinkNode)=> void
 }
 
 export interface CDNPluginOptions {
-  modules?: Array<TrackModule | string>
+  modules?: Array<IModule | string>
   url?: string
-  transform?: () => InjectVisitor
+  transform?: ()=> InjectVisitor
   include?: FilterPattern
   exclude?: FilterPattern
-  logLevel?:'slient' | 'warn'
+  logLevel?: 'slient' | 'warn'
 }
 

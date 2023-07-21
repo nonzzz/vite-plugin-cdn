@@ -14,7 +14,7 @@ export default defineConfig(({ command }) => {
       Components({ resolvers: [VarletUIResolver()] }),
       {
         ...cdn({
-          modules: ['vue', 'vue-demi', 'pinia', '@varlet/ui', 'axios']
+          modules: ['vue', 'vue-demi', 'pinia', '@varlet/ui', 'axios', 'react']
         }),
         apply: command
       },

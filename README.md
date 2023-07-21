@@ -40,17 +40,99 @@ export default defineConfig({
 })
 ```
 
-### Options
+## Options
 
-| params                 | type                                          | default           | description                                                    |
-| ---------------------- | --------------------------------------------- | ----------------- | -------------------------------------------------------------- |
-| `include`              | `string \| RegExp \| Array<string \| RegExp>` | `/\.(mjs|js|ts|vue|jsx|tsx)(\?.*|)$/`               | Include all assets matching any of these conditions.           |
-| `exclude`              | `string \| RegExp \| Array<string \| RegExp>` | `-`               | Exclude all assets matching any of these conditions.           |
-| `url`            | `string`                                      | `jsdelivr`               | cdn source url    |
-| `modules`            | `Array<string>\| Array<TrackModule>`                           | `[]`            | modules to be processed                                    |
-| `transform`   | `()=>InjectVisitor`                          | `-`              | Transform can replace the capture result. and rewrite them. |
-| `logLevel`             | `'slient'|'warn'`                                      | `warn` |  Adjust console output verbosity                                   |
+- [`include`](#include)
+- [`exclude`](#exclude)
+- [`modules`](#modules)
+- [`url`](#url)
+- [`transform`](#transform)
+- [`logLevel`](#logLevel)
 
+### include
+
+Type:
+
+```ts
+
+type FilterPattern = ReadonlyArray<string | RegExp> | string | RegExp | null
+
+```
+Default: `/\.(mjs|js|ts|vue|jsx|tsx)(\?.*|)$/`
+
+Include all assets matching any of these conditions.
+
+### exclude
+
+Type:
+
+```ts
+
+type FilterPattern = ReadonlyArray<string | RegExp> | string | RegExp | null
+
+```
+Default: `undefined`
+
+Exclude all assets matching any of these conditions.
+
+### modules
+
+Type:
+
+```ts
+
+interface TrackModule {
+  name: string
+  global?: string
+  spare?: Array<string> | string 
+  relativeModule?: string
+}
+
+interface IModule extends TrackModule{
+  [prop: string]: any
+}
+
+type Modules = Array<IModule | string>
+
+```
+Default: `[]`
+
+Modules to be processed. Details see [Modules](./docs/Modules.md).
+
+### url
+
+Type: string
+
+Default: `https://cdn.jsdelivr.net/npm/`
+
+CDN url. Details see [URL](./docs/URL.md).
+
+### transform
+
+Type: 
+
+```ts
+
+interface InjectVisitor {
+  script?: (node: ScriptNode)=> void
+  link?: (node: LinkNode)=> void
+}
+
+type Trasnform = ()=> InjectVisitor
+
+```
+
+Default: `undefined`
+
+Transform is a overwrite.
+
+### logLevel 
+
+Type: `slient` | `warn`
+
+Default: `warn`
+
+Adjust console output verbosity
 
 ### Acknowledgements
 

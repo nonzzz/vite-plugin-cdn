@@ -5,17 +5,17 @@ import type { NodePath } from '@babel/core'
 import type { ModuleInfo } from './interface'
 
 
-function isTopLevelCalled(p:NodePath) {
+function isTopLevelCalled(p: NodePath) {
   return t.isProgram(p.parent) || t.isExportDefaultDeclaration(p.parent) || t.isExportNamedDeclaration(p.parent)
 }
 
 export class CodeGen {
-  private dependencies:Map<string, ModuleInfo>
-  injectDependencies(dependencies:Map<string, ModuleInfo>) {
+  private dependencies: Map<string, ModuleInfo>
+  injectDependencies(dependencies: Map<string, ModuleInfo>) {
     this.dependencies = dependencies
   }
 
-  filter(code:string, id:string) {
+  filter(code: string, id: string) {
     const { output } = esModuleLexer({ input: [{ filename: id, code }] })
     if (!len(output)) return false
     const { imports } = output[0]
@@ -27,7 +27,7 @@ export class CodeGen {
     return false
   }
 
-  private scanImportDeclarationAndRecord(path:NodePath<t.ImportDeclaration>, references:Map<string, string>) {
+  private scanImportDeclarationAndRecord(path: NodePath<t.ImportDeclaration>, references: Map<string, string>) {
     const { global: globalName } = this.dependencies.get(path.node.source.value)
     for (const specifier of path.node.specifiers) {
       switch (specifier.type) {
@@ -43,14 +43,14 @@ export class CodeGen {
     }
   }
 
-  private overWriteExportNamedDeclaration(path:NodePath<t.ExportNamedDeclaration>, references:Map<string, string>) {
-    const nodes:Array<t.VariableDeclarator | t.ObjectExpression | t.MemberExpression> = []
-    const natives:Array<t.ExportSpecifier> = []
+  private overWriteExportNamedDeclaration(path: NodePath<t.ExportNamedDeclaration>, references: Map<string, string>) {
+    const nodes: Array<t.VariableDeclarator | t.ObjectExpression | t.MemberExpression> = []
+    const natives: Array<t.ExportSpecifier> = []
     const hasBindings = path.node.source
     const globalName = hasBindings ? this.dependencies.get(path.node.source.value).global : ''
-    const bindings:Set<string> = hasBindings ? this.dependencies.get(path.node.source.value).bindings : new Set()
+    const bindings: Set<string> = hasBindings ? this.dependencies.get(path.node.source.value).bindings : new Set()
 
-    const scanNamedExportsWithSource = (l:t.Identifier, e:t.Identifier, specifier:t.ExportSpecifier) => {
+    const scanNamedExportsWithSource = (l: t.Identifier, e: t.Identifier, specifier: t.ExportSpecifier) => {
       if (!bindings.size) return
       if (l.name === 'default' && l.name !== e.name) {
         const memberExpression = (p) => t.memberExpression(t.identifier(globalName), t.identifier(p))
@@ -82,7 +82,7 @@ export class CodeGen {
       natives.push(specifier)
     }
 
-    const scanNamedExportsWithoutSource = (l:t.Identifier, e:t.Identifier, specifier:t.ExportSpecifier) => {
+    const scanNamedExportsWithoutSource = (l: t.Identifier, e: t.Identifier, specifier: t.ExportSpecifier) => {
       if (references.has(l.name)) {
         const [o, p] = references.get(l.name).split('.')
         if (e.name === 'default') {
@@ -130,8 +130,8 @@ export class CodeGen {
     // export { A , B } from 'module'
     // export * as default from 'module'
     // export * as xx from 'module'
-    const variableDeclaratorNodes = nodes.filter((node):node is t.VariableDeclarator => node.type === 'VariableDeclarator')
-    const objectOrMemberExpression = nodes.filter((node):node is t.ObjectExpression | t.MemberExpression => node.type !== 'VariableDeclarator')
+    const variableDeclaratorNodes = nodes.filter((node): node is t.VariableDeclarator => node.type === 'VariableDeclarator')
+    const objectOrMemberExpression = nodes.filter((node): node is t.ObjectExpression | t.MemberExpression => node.type !== 'VariableDeclarator')
     if (len(objectOrMemberExpression)) {
       const exportDefaultDeclaration = t.exportDefaultDeclaration(objectOrMemberExpression[0])
       if (len(variableDeclaratorNodes) || len(natives)) {
@@ -152,8 +152,8 @@ export class CodeGen {
     }
   }
 
-  private overWriteExportAllDeclaration(path:NodePath<t.ExportAllDeclaration>) {
-    const nodes:Array<t.ExportSpecifier> = []
+  private overWriteExportAllDeclaration(path: NodePath<t.ExportAllDeclaration>) {
+    const nodes: Array<t.ExportSpecifier> = []
     const { bindings } = this.dependencies.get(path.node.source.value)
     bindings.forEach((binding) => {
       const identifier = t.identifier(binding)
@@ -203,10 +203,10 @@ export class CodeGen {
     }
   }
 
-  async transform(code:string) {
+  async transform(code: string) {
     const ast = await babelParse(code, { babelrc: false, configFile: false })
-    const references:Map<string, string> = new Map()
-    const declarations:Map<string, NodePath<t.Declaration | t.Node>> = new Map()
+    const references: Map<string, string> = new Map()
+    const declarations: Map<string, NodePath<t.Declaration | t.Node>> = new Map()
     traverse(ast, {
       ImportDeclaration: {
         enter: (path) => {
