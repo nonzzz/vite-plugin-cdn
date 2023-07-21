@@ -1,3 +1,9 @@
+## 0.8.0
+
+### Features & Improves
+
+- modules add new attribute `resolve` & `relativeModule`
+
 ## 0.7.0
 
 ### Features & Improves
