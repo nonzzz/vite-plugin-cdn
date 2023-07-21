@@ -13,3 +13,4 @@ When you pass `string[]` it will be transform as `IModule[]`
 - global (pacakge global name)
 - spare (links that need to be bind to the page)
 - relativeModule (If scanner error, try it)
+- resolve (preset source convert)

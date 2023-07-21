@@ -1,16 +1,14 @@
 import fsp from 'fs/promises'
 import worker_threads from 'worker_threads'
 import { createConcurrentQueue, createVM, MAX_CONCURRENT } from './vm'
-import { is, len, lookup, uniq } from './shared'
+import { is, len, lookup  } from './shared'
 import type { MessagePort } from 'worker_threads'
-import type { TrackModule, IIFEModuleInfo, ModuleInfo, IModule } from './interface'
+import type { TrackModule, IIFEModuleInfo, ModuleInfo, IModule, ResolverFunction } from './interface'
 
 // This file is a simply dependencies scanner.
 // We won't throw any error unless it's an internal thread error(such as pid not equal)
 // we consume all expection modules in the plugin itself.
 // Notice. This file don't handle any logic with script inject.
-// If we implement option url for each module. It just a pre check to
-// prevent missing parse.
 
 interface WorkerData {
     scannerModule: IModule[]
@@ -18,11 +16,22 @@ interface WorkerData {
     internalThread: boolean
 }
 
-function createWorkerThreads(scannerModule: TrackModule[]) {
-  const { port1: mainPort, port2: workerPort } = new worker_threads.MessageChannel()
+interface ScannerModule {
+  modules: Array<TrackModule>
+  resolvers: Record<string, string | ResolverFunction>
+}
 
+interface ThreadMessage {
+  bindings: Map<string, ModuleInfo>, 
+  failedModules: Map<string, string>
+  id: number
+  error: Error
+}
+
+function createWorkerThreads(scannerModule: ScannerModule) {
+  const { port1: mainPort, port2: workerPort } = new worker_threads.MessageChannel()
   const worker = new worker_threads.Worker(__filename, {
-    workerData: { workerPort, internalThread: true, scannerModule },
+    workerData: { workerPort, internalThread: true, scannerModule: scannerModule.modules },
     transferList: [workerPort],
     execArgv: []
   })
@@ -30,11 +39,17 @@ function createWorkerThreads(scannerModule: TrackModule[]) {
   const run = () => {
     worker.postMessage({ id })
     return new Promise((resolve, reject) => {
-      mainPort.on('message', (message) => {
+      mainPort.on('message', (message: ThreadMessage) => {
         if (message.id !== id) reject(new Error(`Internal error: Expected id ${id} but got id ${message.id}`))
         if (message.error) {
           reject(message.error)
         } else {
+          // Can't copy function reference. So we should bind it again from resolvers
+          message.bindings.forEach((meta, moduleName) => {
+            if (scannerModule.resolvers[moduleName]) {
+              meta.resolve = scannerModule.resolvers[moduleName]
+            }
+          })
           resolve({ dependencies: message.bindings, failedModules: message.failedModules })
         }
         worker.terminate()
@@ -135,30 +150,43 @@ if (worker_threads.workerData?.internalThread) {
 }
 
 class Scanner {
-  modules: Array<IModule>
+  modules: Array<IModule | string>
   dependencies: Map<string, ModuleInfo>
   failedModules: Map<string, string>
   constructor(modules: Array<IModule | string>) {
-    this.modules = this.serialization(modules)
+    this.modules = modules
     this.dependencies = new Map()
     this.failedModules = new Map()
   }
 
   public async scanAllDependencies() {
     // we won't throw any exceptions inside this task.
-    const res = await createWorkerThreads(this.modules)
+    const res = await createWorkerThreads(this.serialization(this.modules))
     this.dependencies = res.dependencies
     this.failedModules = res.failedModules
   }
 
-  private serialization(modules: Array<IModule | string>) {
-    is(Array.isArray(modules), 'vite-plugin-cdn2: option module must be array')
-    return uniq(modules)
-      .map((module) => {
-        if (typeof module === 'string') return { name: module }
-        return module
-      })
-      .filter((v) => v.name)
+  private serialization(input: Array<IModule | string>) {
+    is(Array.isArray(input), 'vite-plugin-cdn2: option module must be array')
+    const modules: Array<IModule> = []
+    const resolvers: Record<string, string | ResolverFunction> = {}
+    const bucket = new Set<string>()
+    for (const module of input) {
+      if (typeof module === 'string') {
+        if (bucket.has(module) || !module) continue
+        modules.push({ name: module })
+        bucket.add(module)
+        continue
+      }
+      if (!module.name || bucket.has(module.name)) continue
+      const { resolve, ...rest } = module
+      if (resolve) {
+        resolvers[rest.name] = resolve
+      }
+      modules.push(rest)
+      bucket.add(module.name)
+    }
+    return { modules, resolvers }
   }
 }
 

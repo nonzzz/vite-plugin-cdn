@@ -13,16 +13,16 @@ export interface IIFEModuleInfo extends TrackModule {
   jsdelivr?: string
 }
 
-export type URLFunction = (p: string, extra: IIFEModuleInfo)=> string
+export type ResolverFunction = (p: string, extra: IIFEModuleInfo)=> string
 
 export interface ModuleInfo extends IIFEModuleInfo{
   bindings: Set<string>
   code?: string
-  url?: string | URLFunction
+  resolve?: string | ResolverFunction
 }
 
 export interface IModule extends TrackModule{
-  [prop: string]: any
+  resolve?: string | ResolverFunction
 }
 
 export interface Serialization {

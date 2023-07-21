@@ -2,7 +2,7 @@
 import { URL } from 'url'
 import { Window } from 'happy-dom'
 import { uniq } from './shared'
-import type { CDNPluginOptions, ScriptNode, LinkNode, ModuleInfo, URLFunction } from './interface'
+import type { CDNPluginOptions, ScriptNode, LinkNode, ModuleInfo, ResolverFunction } from './interface'
 
 function isScript(url: string) {
   return url.split('.').pop() === 'js' ? 'script' : 'link'
@@ -14,16 +14,16 @@ interface Options {
 }
 
 // [baseURL][version][name]
-function replaceURL(p: string, url: string | URLFunction, options: Options) {
+function replaceURL(p: string, url: string | ResolverFunction, options: Options) {
   const template = typeof url === 'function' ? url(p, options.extra) : url
   return template.replace(/\[version\]/, options.extra.version).replace(/\[baseURL\]/, options.baseURL).replace(/\[name\]/, options.extra.name)
 }
 
 function makeURL(moduleMeta: ModuleInfo, baseURL: string) {
-  const { version, name: packageName, relativeModule, url: userURL } = moduleMeta
+  const { version, name: packageName, relativeModule, resolve } = moduleMeta
   if (!baseURL) return
   const u = new URL(`${packageName}@${version}/${relativeModule}`, baseURL).href
-  if (userURL) return replaceURL(u, userURL, { extra: moduleMeta, baseURL })
+  if (resolve) return replaceURL(u, resolve, { extra: moduleMeta, baseURL })
   return u
 }
 

@@ -88,8 +88,10 @@ interface TrackModule {
   relativeModule?: string
 }
 
+type ResolverFunction = (p: string, extra: IIFEModuleInfo)=> string
+
 interface IModule extends TrackModule{
-  [prop: string]: any
+  resolve: string | ResolverFunction
 }
 
 type Modules = Array<IModule | string>

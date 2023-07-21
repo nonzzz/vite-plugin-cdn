@@ -13,17 +13,8 @@ export function len<T extends ArrayLike<unknown>>(source: T) {
   return source.length
 }
 
-export function uniq<T>(arr: NonNullable<T>[]) {
-  const result: T[] = []
-  const record = new Map<unknown, boolean>()
-  arr.forEach((item) => {
-    const key = typeof item === 'object' ? JSON.stringify(item) : item
-    if (!record.has(key)) {
-      result.push(item)
-      record.set(key, true)
-    }
-  })
-  return result
+export function uniq<T>(arr: T[]) {
+  return Array.from(new Set(arr))
 }
 
 export function isSupportThreads(): [boolean, string] {
@@ -38,4 +29,9 @@ export function is(condit: boolean, message: string) {
   if (!condit) {
     throw new Error(message)
   }
+}
+
+export function omit<T extends Record<string, unknown>, K extends keyof T>(source: T, excludes: K[]) {
+  return (Object.keys(source) as K[])
+    .reduce((acc, cur) => excludes.includes(cur) ? acc : { ...acc, [cur]: d[cur] }, {} as Omit<T, K>)
 }
