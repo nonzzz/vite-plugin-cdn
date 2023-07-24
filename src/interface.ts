@@ -81,5 +81,6 @@ export interface CDNPluginOptions {
   include?: FilterPattern
   exclude?: FilterPattern
   logLevel?: 'slient' | 'warn'
+  resolve?: ResolverFunction
 }
 

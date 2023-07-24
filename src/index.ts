@@ -8,7 +8,7 @@ import { jsdelivr } from './url'
 import type { CDNPluginOptions } from './interface'
 
 function cdn(opts: CDNPluginOptions = {}): Plugin {
-  const { modules = [], url = jsdelivr, include = /\.(mjs|js|ts|vue|jsx|tsx)(\?.*|)$/, exclude, logLevel = 'warn' } = opts
+  const { modules = [], url = jsdelivr, include = /\.(mjs|js|ts|vue|jsx|tsx)(\?.*|)$/, exclude, logLevel = 'warn', resolve: resolver } = opts
   const filter = createFilter(include, exclude)
   const scanner = createScanner(modules)
   const generator = createCodeGenerator()
@@ -35,7 +35,7 @@ function cdn(opts: CDNPluginOptions = {}): Plugin {
       return generator.transform(code)
     },
     transformIndexHtml(html) {
-      const inject = createInjectScript(scanner.dependencies, url)
+      const inject = createInjectScript(scanner.dependencies, url, resolver)
       return inject.text(html, opts.transform)
     }
   }

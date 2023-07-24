@@ -19,17 +19,17 @@ function replaceURL(p: string, url: string | ResolverFunction, options: Options)
   return template.replace(/\[version\]/, options.extra.version).replace(/\[baseURL\]/, options.baseURL).replace(/\[name\]/, options.extra.name)
 }
 
-function makeURL(moduleMeta: ModuleInfo, baseURL: string) {
+function makeURL(moduleMeta: ModuleInfo, baseURL: string, resolver?: ResolverFunction) {
   const { version, name: packageName, relativeModule, resolve } = moduleMeta
   if (!baseURL) return
-  const u = new URL(`${packageName}@${version}/${relativeModule}`, baseURL).href
+  const u = resolver ? resolver(baseURL, moduleMeta) : new URL(`${packageName}@${version}/${relativeModule}`, baseURL).href 
   if (resolve) return replaceURL(u, resolve, { extra: moduleMeta, baseURL })
   return u
 }
 
 function makeNode(moduleInfo: ModuleInfo): ScriptNode | LinkNode {
   return {
-    tag: 'link',
+    tag: 'link',  
     url: new Set(),
     name: moduleInfo.name,
     extra: moduleInfo
@@ -39,8 +39,8 @@ function makeNode(moduleInfo: ModuleInfo): ScriptNode | LinkNode {
 class InjectScript {
   private modules: Map<string, LinkNode | ScriptNode>
   private window: Window
-  constructor(modules: Map<string, ModuleInfo>, url: string) {
-    this.modules = this.prepareSource(modules, url)
+  constructor(modules: Map<string, ModuleInfo>, url: string, resolver?: ResolverFunction) {
+    this.modules = this.prepareSource(modules, url, resolver)
     this.window = new Window()
   }
 
@@ -85,7 +85,7 @@ class InjectScript {
     return document.body.innerHTML
   }
 
-  private prepareSource(modules: Map<string, ModuleInfo>, baseURL: string) {
+  private prepareSource(modules: Map<string, ModuleInfo>, baseURL: string, resolver?: ResolverFunction) {
     const container: Map<string, LinkNode | ScriptNode> = new Map()
 
     const traverseModule = (moduleMeta: ModuleInfo, moduleName: string) => {
@@ -112,7 +112,7 @@ class InjectScript {
 
     modules.forEach((meta, moduleName) => {
       const node = makeNode(meta)
-      const url = makeURL(meta, baseURL)
+      const url = makeURL(meta, baseURL, resolver)
       if (!url) return
       node.url.add(url)
       node.tag = isScript(url)
@@ -126,7 +126,8 @@ class InjectScript {
 
 export function createInjectScript(
   dependModules: Map<string, ModuleInfo>,
-  url: string
+  url: string,
+  resolver?: ResolverFunction
 ) {
-  return new InjectScript(dependModules, url)
+  return new InjectScript(dependModules, url, resolver)
 }

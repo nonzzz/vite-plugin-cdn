@@ -48,6 +48,7 @@ export default defineConfig({
 - [`url`](#url)
 - [`transform`](#transform)
 - [`logLevel`](#logLevel)
+- [`resolve`](#resolve)
 
 ### include
 
@@ -134,7 +135,15 @@ Type: `slient` | `warn`
 
 Default: `warn`
 
-Adjust console output verbosity
+Adjust console output verbosity.
+
+### resolve
+
+Type: `ResolverFunction`
+
+Default: `undefined`
+
+A global url parser.
 
 ### Acknowledgements
 
