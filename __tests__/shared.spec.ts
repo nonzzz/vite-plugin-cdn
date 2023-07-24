@@ -1,6 +1,6 @@
-import test from 'ava'
 import fsp from 'fs/promises'
-import { lookup, len } from '../dist/shared'
+import test from 'ava'
+import { len, lookup } from '../dist/shared'
 
 
 test('len', (t) => {

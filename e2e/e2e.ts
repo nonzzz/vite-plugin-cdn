@@ -4,9 +4,9 @@ import fs from 'fs'
 import http from 'http'
 import test from 'ava'
 import { chromium } from 'playwright'
+import type { Page } from 'playwright'
 import { cdn } from '../dist'
 
-import type { Page } from 'playwright'
 import type { Vite2Instance } from './vite2/interface'
 import type { Vite3Instance } from './vite3/interface'
 import type { Vite4Instance } from './vite4/interface'
@@ -26,7 +26,7 @@ type Server = http.Server & {
 
 const defaultWd = __dirname
 
-function prepareAssets(taskName:string, options:TestOptions) {
+function prepareAssets(taskName: string, options: TestOptions) {
   const { vite, pluginOption = {}, plugins } = options
   vite.build({
     root: defaultWd,
@@ -38,7 +38,7 @@ function prepareAssets(taskName:string, options:TestOptions) {
   })
 }
 
-function createGetter<T>(obj: T, key: string, getter: ()=>unknown) {
+function createGetter<T>(obj: T, key: string, getter: ()=> unknown) {
   Object.defineProperty(obj, key, {
     get: getter
   })
@@ -101,7 +101,7 @@ async function expectTestCase(taskName: string, page: Awaited<Page>) {
   test(`${taskName} cdn load`, async (t) => t.is(await expect1, 'info'))
 }
 
-export async function runTest(taskName:string, options: TestOptions) {
+export async function runTest(taskName: string, options: TestOptions) {
   await prepareAssets(taskName, options)
   await new Promise((resolve) => setTimeout(resolve, 5000))
   const { server } = createServer(taskName)

@@ -10,7 +10,7 @@ test('filter', async (t) => {
      import { ref } from 'vue';
      const v = ref(0)
     `
-  const dependencies:Map<string, ModuleInfo> = new Map()
+  const dependencies: Map<string, ModuleInfo> = new Map()
   const codeGen = createCodeGenerator()
   dependencies.set('vue', {
     name: 'vue',
@@ -83,7 +83,7 @@ test('exports with source and re named local name', async (t) => {
   if (!res.code) return
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const ast = await parse(res.code, { babelrc: false, configFile: false })!
-  const keys:Set<string> = new Set()
+  const keys: Set<string> = new Set()
   await traverse(ast, {
     ObjectProperty: {
       enter: (path) => {
@@ -114,7 +114,7 @@ test('export all with source and re named it with default', async (t) => {
   if (!res.code) return
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const ast = await parse(res.code, { babelrc: false, configFile: false })!
-  const keys:Set<string> = new Set()
+  const keys: Set<string> = new Set()
   await traverse(ast, {
     ObjectProperty: (path) => {
       path.node.key.type === 'Identifier' && keys.add(path.node.key.name)
@@ -133,7 +133,7 @@ test('export all with source and re named it with custom', async (t) => {
   if (!res.code) return
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const ast = await parse(res.code, { babelrc: false, configFile: false })!
-  const keys:Set<string> = new Set()
+  const keys: Set<string> = new Set()
   await traverse(ast, {
     ObjectProperty: (path) => {
       path.node.key.type === 'Identifier' && keys.add(path.node.key.name)

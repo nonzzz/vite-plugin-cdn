@@ -1,9 +1,9 @@
 import fsp from 'fs/promises'
 import worker_threads from 'worker_threads'
-import { createConcurrentQueue, createVM, MAX_CONCURRENT } from './vm'
-import { is, len, lookup  } from './shared'
 import type { MessagePort } from 'worker_threads'
-import type { TrackModule, IIFEModuleInfo, ModuleInfo, IModule, ResolverFunction } from './interface'
+import { MAX_CONCURRENT, createConcurrentQueue, createVM } from './vm'
+import { is, len, lookup  } from './shared'
+import type { IIFEModuleInfo, IModule, ModuleInfo, ResolverFunction, TrackModule } from './interface'
 
 // This file is a simply dependencies scanner.
 // We won't throw any error unless it's an internal thread error(such as pid not equal)

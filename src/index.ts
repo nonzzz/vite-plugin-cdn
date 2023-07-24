@@ -1,10 +1,10 @@
 import { createFilter } from '@rollup/pluginutils'
+import type { Plugin } from 'vite'
 import { createScanner } from './scanner'
 import { createInjectScript } from './inject'
 import { createCodeGenerator } from './code-gen'
 import { isSupportThreads  } from './shared'
 import { jsdelivr } from './url'
-import type { Plugin } from 'vite'
 import type { CDNPluginOptions } from './interface'
 
 function cdn(opts: CDNPluginOptions = {}): Plugin {

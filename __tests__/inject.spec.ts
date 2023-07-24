@@ -10,7 +10,7 @@ interface MockIIFEMdoule extends TrackModule{
 }
 
 test('inject', (t) => {
-  const modules:Map<string, MockIIFEMdoule> = new Map()
+  const modules: Map<string, MockIIFEMdoule> = new Map()
   modules.set('fake', {
     relativeModule: 'fake.js',
     version: '0.0.0.',

@@ -2,7 +2,7 @@
 import { URL } from 'url'
 import { Window } from 'happy-dom'
 import { uniq } from './shared'
-import type { CDNPluginOptions, ScriptNode, LinkNode, ModuleInfo, ResolverFunction } from './interface'
+import type { CDNPluginOptions, LinkNode, ModuleInfo, ResolverFunction, ScriptNode } from './interface'
 
 function isScript(url: string) {
   return url.split('.').pop() === 'js' ? 'script' : 'link'

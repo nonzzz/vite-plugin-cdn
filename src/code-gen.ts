@@ -1,7 +1,7 @@
 import { parse as esModuleLexer } from 'rs-module-lexer'
-import { parse as babelParse, traverse, transformFromAstAsync, types as t  } from '@babel/core'
-import { len } from './shared'
+import { parse as babelParse, types as t, transformFromAstAsync, traverse  } from '@babel/core'
 import type { NodePath } from '@babel/core'
+import { len } from './shared'
 import type { ModuleInfo } from './interface'
 
 
