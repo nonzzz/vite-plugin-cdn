@@ -1,3 +1,10 @@
+## 0.9.0
+
+### Feature & Improves
+
+- Make firendly types
+- Add `resolve` option for custom all url.
+
 ## 0.8.0
 
 ### Features & Improves
