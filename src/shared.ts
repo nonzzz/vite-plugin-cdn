@@ -30,8 +30,3 @@ export function is(condit: boolean, message: string) {
     throw new Error(message)
   }
 }
-
-export function omit<T extends Record<string, unknown>, K extends keyof T>(source: T, excludes: K[]) {
-  return (Object.keys(source) as K[])
-    .reduce((acc, cur) => excludes.includes(cur) ? acc : { ...acc, [cur]: d[cur] }, {} as Omit<T, K>)
-}
