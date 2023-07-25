@@ -1,8 +1,8 @@
 import test from 'ava'
-import { len } from '../dist/shared'
-import { createInjectScript } from '../dist/inject'
-import { jsdelivr } from '../dist/url'
-import type { TrackModule } from '../dist'
+import { len } from '../src/shared'
+import { createInjectScript } from '../src/inject'
+import { jsdelivr } from '../src/url'
+import type { TrackModule } from '../src'
 
 interface MockIIFEMdoule extends TrackModule{
   relativeModule: string

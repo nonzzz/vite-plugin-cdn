@@ -30,3 +30,7 @@ export function is(condit: boolean, message: string) {
     throw new Error(message)
   }
 }
+
+// TODO 
+// If we find the correct dynamic import handing it should be removed.
+export const _import = new Function('specifier', 'return import(specifier)')

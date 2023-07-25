@@ -2,13 +2,17 @@ import fsp from 'fs/promises'
 import worker_threads from 'worker_threads'
 import type { MessagePort } from 'worker_threads'
 import { MAX_CONCURRENT, createConcurrentQueue, createVM } from './vm'
-import { is, len, lookup  } from './shared'
+import { _import, is, len, lookup } from './shared'
 import type { IIFEModuleInfo, IModule, ModuleInfo, ResolverFunction, TrackModule } from './interface'
 
 // This file is a simply dependencies scanner.
 // We won't throw any error unless it's an internal thread error(such as pid not equal)
 // we consume all expection modules in the plugin itself.
 // Notice. This file don't handle any logic with script inject.
+
+// TODO
+// We pack this file just to make the test pass. If we migrate to other test framework
+// Don't forget remove it.
 
 interface WorkerData {
     scannerModule: IModule[]
@@ -83,7 +87,7 @@ async function tryResolveModule(
       const code = await fsp.readFile(iifeFilePath, 'utf8')
       Object.assign(meta, { name, version, code, relativeModule: iifeRelativePath, ...rest })
     }
-    const pkg = await import(moduleName)
+    const pkg = await _import(moduleName)
     const keys = Object.keys(pkg)
     // If it's only exports by default
     if (keys.includes('default') && len(keys) !== 1) {

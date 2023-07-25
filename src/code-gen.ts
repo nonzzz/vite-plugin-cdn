@@ -22,7 +22,7 @@ export class CodeGen {
     const modules = Array.from(new Set([...imports.map(i => i.n)]))
     for (const m of modules) {
       if (this.dependencies.has(m)) return true
-      return false
+      continue
     }
     return false
   }

@@ -4,7 +4,7 @@ import vue from '@vitejs/plugin-vue'
 import { VarletUIResolver } from 'unplugin-vue-components/resolvers'
 import Components from 'unplugin-vue-components/vite'
 import { cdn } from 'vite-plugin-cdn2'
-import { unpkg } from 'vite-plugin-cdn2/url'
+import { unpkg } from 'vite-plugin-cdn2/url.js'
 import { compression } from 'vite-plugin-compression2'
 import Inspect from 'vite-plugin-inspect'
 
