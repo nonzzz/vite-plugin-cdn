@@ -1,7 +1,7 @@
 {
   "name": "vite-plugin-cdn2-example",
   "scripts": {
-    "dev": "vite",
+    "dev": "set DEBUG=vite-plugin-cdn2 & vite",
     "build": "vite build",
     "preview": "vite preview"
   },
