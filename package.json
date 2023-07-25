@@ -37,13 +37,6 @@
     },
     "./*": "./*"
   },
-  "typesVersions": {
-    "*": {
-      "*": [
-        "./dist/*"
-      ]
-    }
-  },
   "author": "Kanno",
   "license": "MIT",
   "homepage": "https://github.com/nonzzz/vite-plugin-cdn",

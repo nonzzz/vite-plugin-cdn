@@ -1,6 +1,6 @@
 import test from 'ava'
 import { parse, traverse } from '@babel/core'
-import { createCodeGenerator } from '../dist/code-gen'
+import { createCodeGenerator } from '../src/code-gen'
 import { createScanner } from '../dist/scanner'
 import type { ModuleInfo } from '../src/interface'
 
