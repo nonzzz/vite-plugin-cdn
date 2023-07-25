@@ -4,50 +4,51 @@ import { Window } from 'happy-dom'
 import { len } from './shared'
 import type { ModuleInfo } from './interface'
 
+// Normal. Each umd of iife library only export one module. But some libraries don't 
+// follow this principle. They export some variable starting with __ like `Vue`,`Element-Plus`
+// Variables staring with an underscore are private variables by convention and we shouldn't 
+// parse them. If they are mulitple variables then we only take the last.
+
 export function createVM() {
   const bindings: Map<string, ModuleInfo>  = new Map()
   const window = new Window()
   const context = vm.createContext({})
-  let _meta: ModuleInfo = null
-  let id = 0
-  let callerId = 0
 
   const updateBindings  = (name: string, meta: ModuleInfo) => {
     bindings.set(meta.name, { ...meta, global: name }) 
   }
   const shadow = new Proxy(window, {
     set(target, key: string, value, receiver) {
-      callerId++
-      if (id === callerId) updateBindings(key, _meta)
       Reflect.set(target, key, value, receiver)
       return true
     }
   })
 
   const run = (code: string, meta: ModuleInfo, handler: (err: Error)=> void) => {
-    _meta = meta
     try {
       vm.runInContext(code, context)
-      // TODO
-      // This is a temporary solution.
-      // when vm run script it can't run others logic in threads it will directly
-      // end the function.
-      // So we need to get the last one using the tag.
       // https://github.com/nodejs/help/issues/1378
-      id = len(Object.keys(context))
+      const c = Object.keys(context)
       Object.assign(shadow, context)
+      let last = c.pop()
+      while (last.startsWith('__')) {
+        last = c.pop()
+      }
+      updateBindings(last, meta)
       // context free
       for (const key in context) {
         Reflect.deleteProperty(context, key)
       }
-      _meta = null
-      callerId = 0
-      id = 0
     } catch (error) {
       try {
         // In most cases there will only be one variable
         window.eval(code)
-        updateBindings(Object.keys(shadow).pop(), meta)
+        const c = Object.keys(shadow)
+        let last = c.pop()
+        while (last.startsWith('__')) {
+          last = c.pop()
+        }
+        updateBindings(last, meta)
       } catch (_) {
         handler(new Error(meta.name))        
       }
