@@ -4,7 +4,7 @@
 
 ```js
 import { cdn } from 'vite-plugin-cdn2'
-import { unpkg } from 'vite-plugin-cdn2/url'
+import { unpkg } from 'vite-plugin-cdn2/url.js'
 
 cdn({url:unpkg,modules:['vue']})
 
