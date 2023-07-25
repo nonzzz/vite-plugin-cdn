@@ -1,11 +1,14 @@
 import { createFilter } from '@rollup/pluginutils'
 import type { Plugin } from 'vite'
+import _debug from 'debug'
 import { createScanner } from './scanner'
 import { createInjectScript } from './inject'
 import { createCodeGenerator } from './code-gen'
 import { isSupportThreads  } from './shared'
 import { jsdelivr } from './url'
 import type { CDNPluginOptions } from './interface'
+
+const debug = _debug('vite-plugin-cdn2')
 
 function cdn(opts: CDNPluginOptions = {}): Plugin {
   const { modules = [], url = jsdelivr, include = /\.(mjs|js|ts|vue|jsx|tsx)(\?.*|)$/, exclude, logLevel = 'warn', resolve: resolver } = opts
@@ -20,7 +23,9 @@ function cdn(opts: CDNPluginOptions = {}): Plugin {
       const [isSupport, version] = isSupportThreads()
       try {
         if (!isSupport) throw new Error(`vite-plugin-cdn2 can't work with nodejs ${version}.`)
+        debug('start scanning')
         await scanner.scanAllDependencies()
+        debug('scanning done', scanner.dependencies)
         generator.injectDependencies(scanner.dependencies)
         if (logLevel === 'warn') {
           scanner.failedModules.forEach((errorMessage, name) => config.logger.error(`vite-plugin-cdn2: ${name} ${errorMessage ? errorMessage : 'resolved failed.Please check it.'}`))
