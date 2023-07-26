@@ -1,9 +1,6 @@
-<h1 aligin="center">vite-plugin-cdn2</h1>
-
-A Vite plugin that allowed you replace module with CDN. This plugin is designed to replace
-`vite-plugin-cdn`,`vite-plugin-cdn-import`.
-Why choose `vite-plugin-cdn2`? Simple conf and usage. The most important thing is that can over
-many scenes.
+<h1 align="center">
+<img src="https://socialify.git.ci/nonzzz/vite-plugin-cdn/image?description=1&descriptionEditable=A%20Vite%20plugin%20that%20allowed%20you%20replace%20module%20with%20CDN.%20&font=KoHo&language=1&logo=https%3A%2F%2Fcamo.githubusercontent.com%2F61e102d7c605ff91efedb9d7e47c1c4a07cef59d3e1da202fd74f4772122ca4e%2F68747470733a2f2f766974656a732e6465762f6c6f676f2e737667&name=1&pattern=Circuit%20Board&theme=Auto" alt="vite-plugin-cdn" width="640" height="320" />
+</h1>
 
 <p align="center">
 <img src="https://img.shields.io/codecov/c/github/nonzzz/vite-plugin-cdn?style=for-the-badge" alt="Coverage Status" />
@@ -158,6 +155,7 @@ Thanks to [JetBrains](https://www.jetbrains.com/) for allocating free open-sourc
 
 - [Background](./docs/Background.md)
 - [How it works](./docs/How-it-works.md)
+- [Q & A](./docs/Q&A.md)
 
 ### LICENSE
 
