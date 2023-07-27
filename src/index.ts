@@ -24,7 +24,7 @@ function cdn(opts: CDNPluginOptions = {}): Plugin {
       try {
         if (!isSupport) throw new Error(`vite-plugin-cdn2 can't work with nodejs ${version}.`)
         debug('start scanning')
-        await scanner.scanAllDependencies()
+        scanner.scanAllDependencies()
         debug('scanning done', scanner.dependencies)
         generator.injectDependencies(scanner.dependencies)
         if (logLevel === 'warn') {

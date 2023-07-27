@@ -40,27 +40,26 @@ function createWorkerThreads(scannerModule: ScannerModule) {
     execArgv: []
   })
   const id = 0
-  const run = () => {
-    worker.postMessage({ id })
-    return new Promise((resolve, reject) => {
-      mainPort.on('message', (message: ThreadMessage) => {
-        if (message.id !== id) reject(new Error(`Internal error: Expected id ${id} but got id ${message.id}`))
-        if (message.error) {
-          reject(message.error)
-        } else {
-          // Can't copy function reference. So we should bind it again from resolvers
-          message.bindings.forEach((meta, moduleName) => {
-            if (scannerModule.resolvers[moduleName]) {
-              meta.resolve = scannerModule.resolvers[moduleName]
-            }
-          })
-          resolve({ dependencies: message.bindings, failedModules: message.failedModules })
-        }
-        worker.terminate()
-      })
+  worker.unref()
+  const runSync = () => {
+    const sharedBuffer = new SharedArrayBuffer(4)
+    const sharedBufferView = new Int32Array(sharedBuffer)
+    worker.postMessage({ sharedBuffer, id })
+    const status = Atomics.wait(sharedBufferView, 0, 0)
+    if (status !== 'ok' && status !== 'not-equal') throw new Error('Internal error: Atomics.wait() failed: ' + status)
+    const { message }: {message: ThreadMessage} = worker_threads.receiveMessageOnPort(mainPort)
+    if (message.id !== id) throw new Error(`Internal error: Expected id ${id} but got id ${message.id}`)
+    if (message.error) throw message.error
+    const { bindings, failedModules } = message
+    // Can't copy function reference. So we should bind it again from resolvers
+    bindings.forEach((meta, moduleName) => {
+      if (scannerModule.resolvers[moduleName]) {
+        meta.resolve = scannerModule.resolvers[moduleName]
+      }
     })
+    return { dependencies: bindings, failedModules }
   }
-  return run() as Promise<{dependencies: Map<string, ModuleInfo>, failedModules: Map<string, string>}>
+  return runSync()
 }
 
 async function tryResolveModule(
@@ -111,7 +110,7 @@ async function tryResolveModule(
   }
 }
 
-function startAsyncThreads() {
+function startSyncThreads() {
   if (!worker_threads.workerData.internalThread) return
   const { workerPort, scannerModule } = worker_threads.workerData as WorkerData
   const { parentPort } = worker_threads
@@ -120,7 +119,8 @@ function startAsyncThreads() {
   const failedModules: Map<string, string> = new Map()
   parentPort?.on('message', (msg) => {
     (async () => {
-      const { id } = msg
+      const { id, sharedBuffer } = msg
+      const sharedBufferView = new Int32Array(sharedBuffer)
       try {
         const queue = createConcurrentQueue(MAX_CONCURRENT)
         for (const module of scannerModule) {
@@ -145,12 +145,14 @@ function startAsyncThreads() {
       } catch (error) {
         workerPort.postMessage({ error, id })
       }
+      Atomics.add(sharedBufferView, 0, 1)
+      Atomics.notify(sharedBufferView, 0, Infinity)
     })()
   })
 }
 
 if (worker_threads.workerData?.internalThread) {
-  startAsyncThreads()
+  startSyncThreads()
 }
 
 class Scanner {
@@ -163,9 +165,9 @@ class Scanner {
     this.failedModules = new Map()
   }
 
-  public async scanAllDependencies() {
+  public scanAllDependencies() {
     // we won't throw any exceptions inside this task.
-    const res = await createWorkerThreads(this.serialization(this.modules))
+    const res = createWorkerThreads(this.serialization(this.modules))
     this.dependencies = res.dependencies
     this.failedModules = res.failedModules
   }
