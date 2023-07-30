@@ -1,3 +1,9 @@
+## 0.9.2
+
+### Patches
+
+- Fix "type:module" can't use this package.
+
 ## 0.9.0
 
 ### Feature & Improves
