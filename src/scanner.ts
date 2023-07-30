@@ -1,4 +1,5 @@
 import fsp from 'fs/promises'
+import url from 'url'
 import worker_threads from 'worker_threads'
 import type { MessagePort } from 'worker_threads'
 import { MAX_CONCURRENT, createConcurrentQueue, createVM } from './vm'
@@ -13,6 +14,15 @@ import type { IIFEModuleInfo, IModule, ModuleInfo, ResolverFunction, TrackModule
 // TODO
 // We pack this file just to make the test pass. If we migrate to other test framework
 // Don't forget remove it.
+
+// https://github.com/evanw/esbuild/issues/859
+// however i can't want break currently export strategy. 
+// So we transform each import.meta.url and inejct banner for it.
+// But it just a temporary solution.
+// import.meta.url will be transform as 
+// const __meta = { url: require('url').pathToFileURL(__filename).href }
+
+const ___filename = url.fileURLToPath(import.meta.url)
 
 interface WorkerData {
     scannerModule: IModule[]
@@ -34,7 +44,7 @@ interface ThreadMessage {
 
 function createWorkerThreads(scannerModule: ScannerModule) {
   const { port1: mainPort, port2: workerPort } = new worker_threads.MessageChannel()
-  const worker = new worker_threads.Worker(__filename, {
+  const worker = new worker_threads.Worker(___filename, {
     workerData: { workerPort, internalThread: true, scannerModule: scannerModule.modules },
     transferList: [workerPort],
     execArgv: []

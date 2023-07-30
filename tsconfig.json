@@ -5,11 +5,16 @@
     "noImplicitThis": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "target": "ES2019",
+    "target": "ESNext",
     "lib": ["esnext", "dom"],
     "resolveJsonModule": true,
-    "module": "CommonJS",
+    "module": "ESNext",
     "moduleResolution": "node",
     "outDir": "dist"
+  },
+  "ts-node": {
+    "compilerOptions": {
+      "module": "CommonJS"
+    }
   }
 }
