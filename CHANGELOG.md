@@ -1,3 +1,9 @@
+## 0.9.3
+
+### Patches
+
+- Fix "require.resolve" should work with “type:module”.
+
 ## 0.9.2
 
 ### Patches
