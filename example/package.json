@@ -1,8 +1,9 @@
 {
   "name": "vite-plugin-cdn2-example",
+  "type": "module",
   "scripts": {
     "dev": "set DEBUG=vite-plugin-cdn2 & vite",
-    "build": "vite build",
+    "build": "set DEBUG=vite-plugin-cdn2 & vite build",
     "preview": "vite preview"
   },
   "devDependencies": {

@@ -1,5 +1,6 @@
 import fsp from 'fs/promises'
 import url from 'url'
+import module from 'module'
 import worker_threads from 'worker_threads'
 import type { MessagePort } from 'worker_threads'
 import { MAX_CONCURRENT, createConcurrentQueue, createVM } from './vm'
@@ -21,6 +22,9 @@ import type { IIFEModuleInfo, IModule, ModuleInfo, ResolverFunction, TrackModule
 // But it just a temporary solution.
 // import.meta.url will be transform as 
 // const __meta = { url: require('url').pathToFileURL(__filename).href }
+
+
+const _require = module.createRequire(import.meta.url)
 
 const ___filename = url.fileURLToPath(import.meta.url)
 
@@ -79,7 +83,7 @@ async function tryResolveModule(
 ) {
   const { name: moduleName, relativeModule, ...rest } = module
   try {
-    const modulePath = require.resolve(moduleName)
+    const modulePath = _require.resolve(moduleName)
     const packageJsonPath = lookup(modulePath, 'package.json')
     const str = await fsp.readFile(packageJsonPath, 'utf8')
     const packageJSON: IIFEModuleInfo = JSON.parse(str)
