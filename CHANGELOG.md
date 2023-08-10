@@ -1,3 +1,14 @@
+## 0.10.0
+
+### Feaature & Improves
+
+- Support load submodule and join analyze. (Package.json "exports" module)
+
+Why we need it? Because more and more packages provide the exports fileld.So we should
+support it. In past we can't process like "import ReactDOM from 'react-dom/client'". But now 
+we can do it.
+
+
 ## 0.9.3
 
 ### Patches
