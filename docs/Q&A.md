@@ -35,3 +35,10 @@ if(scanner.dependencies.has('element-plus')){
 }
 
 ```
+Or you can set 'aliases' from 'module' by manual.
+
+```js
+
+moudles: [{ name: "element-plus", aliases: ['es','lib'] }]
+
+```

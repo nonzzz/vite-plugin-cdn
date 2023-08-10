@@ -17,7 +17,8 @@ test('filter', async (t) => {
     global: 'Vue',
     version: '0.0.0',
     relativeModule: '',
-    bindings: new Set()
+    bindings: new Set(),
+    aliases: []
   })
   codeGen.injectDependencies(dependencies)
   t.is(codeGen.filter(code, 'mock.js'), true)
@@ -26,7 +27,7 @@ test('filter', async (t) => {
 test('scope', async (t) => {
   const code = 'import { version } from \'vue\';\n console.log(version);\n function t() { const version = 3;\n console.log(version) }'
   const scanner = createScanner(['vue'])
-  await scanner.scanAllDependencies()
+  scanner.scanAllDependencies()
   const codeGen = createCodeGenerator()
   codeGen.injectDependencies(scanner.dependencies)
   const res = await codeGen.transform(code)
@@ -36,7 +37,7 @@ test('scope', async (t) => {
 test('exports loose source', async (t) => {
   const code = 'import { version } from \'vue\';\n export { version };\n'
   const scanner = createScanner(['vue'])
-  await scanner.scanAllDependencies()
+  scanner.scanAllDependencies()
   const codeGen = createCodeGenerator()
   codeGen.injectDependencies(scanner.dependencies)
   const res = await codeGen.transform(code)
@@ -46,7 +47,7 @@ test('exports loose source', async (t) => {
 test('exports loose source and re named exported name', async (t) => {
   const code = 'import { version } from \'vue\';\n export { version, version as default };\n'
   const scanner = createScanner(['vue'])
-  await scanner.scanAllDependencies()
+  scanner.scanAllDependencies()
   const codeGen = createCodeGenerator()
   codeGen.injectDependencies(scanner.dependencies)
   const res = await codeGen.transform(code)
@@ -56,7 +57,7 @@ test('exports loose source and re named exported name', async (t) => {
 test('exports loose source and export self module', async (t) => {
   const code = 'import { version , ref } from \'vue\';\n const t = \'nonzzz\';\n export { t, version, ref as default };'
   const scanner = createScanner(['vue'])
-  await scanner.scanAllDependencies()
+  scanner.scanAllDependencies()
   const codeGen = createCodeGenerator()
   codeGen.injectDependencies(scanner.dependencies)
   const res = await codeGen.transform(code)
@@ -66,7 +67,7 @@ test('exports loose source and export self module', async (t) => {
 test('exports with source', async (t) => {
   const code = 'export { ref , version } from \'vue\''
   const scanner = createScanner(['vue'])
-  await scanner.scanAllDependencies()
+  scanner.scanAllDependencies()
   const codeGen = createCodeGenerator()
   codeGen.injectDependencies(scanner.dependencies)
   const res = await codeGen.transform(code)
@@ -76,7 +77,7 @@ test('exports with source', async (t) => {
 test('exports with source and re named local name', async (t) => {
   const code = 'export { default as myVue, version } from \'vue\''
   const scanner = createScanner(['vue'])
-  await scanner.scanAllDependencies()
+  scanner.scanAllDependencies()
   const codeGen = createCodeGenerator()
   codeGen.injectDependencies(scanner.dependencies)
   const res = await codeGen.transform(code)
@@ -97,7 +98,7 @@ test('exports with source and re named local name', async (t) => {
 test('exports with source and re named exported name', async (t) => {
   const code = 'export { version as default , ref } from \'vue\''
   const scanner = createScanner(['vue'])
-  await scanner.scanAllDependencies()
+  scanner.scanAllDependencies()
   const codeGen = createCodeGenerator()
   codeGen.injectDependencies(scanner.dependencies)
   const res = await codeGen.transform(code)
@@ -107,7 +108,7 @@ test('exports with source and re named exported name', async (t) => {
 test('export all with source and re named it with default', async (t) => {
   const code = 'export * as default from \'vue\''
   const scanner = createScanner(['vue'])
-  await scanner.scanAllDependencies()
+  scanner.scanAllDependencies()
   const codeGen = createCodeGenerator()
   codeGen.injectDependencies(scanner.dependencies)
   const res = await codeGen.transform(code)
@@ -126,7 +127,7 @@ test('export all with source and re named it with default', async (t) => {
 test('export all with source and re named it with custom', async (t) => {
   const code = 'export * as myVue from \'vue\''
   const scanner = createScanner(['vue'])
-  await scanner.scanAllDependencies()
+  scanner.scanAllDependencies()
   const codeGen = createCodeGenerator()
   codeGen.injectDependencies(scanner.dependencies)
   const res = await codeGen.transform(code)
@@ -145,7 +146,7 @@ test('export all with source and re named it with custom', async (t) => {
 test('export all declaration', async (t) => {
   const code = 'export * from \'vue\''
   const scanner = createScanner(['vue'])
-  await scanner.scanAllDependencies()
+  scanner.scanAllDependencies()
   const codeGen = createCodeGenerator()
   codeGen.injectDependencies(scanner.dependencies)
   const res = await codeGen.transform(code)
@@ -164,7 +165,7 @@ test('export all declaration', async (t) => {
 test('export with declaration', async (t) => {
   const code = 'import { ref } from \'vue\';\nexport const value = ref(0);'
   const scanner = createScanner(['vue'])
-  await scanner.scanAllDependencies()
+  scanner.scanAllDependencies()
   const codeGen = createCodeGenerator()
   codeGen.injectDependencies(scanner.dependencies)
   const res = await codeGen.transform(code)
@@ -175,9 +176,19 @@ test('export with declaration', async (t) => {
 test('export all module but the current module itself contains duplicated node', async (t) => {
   const code = 'export * from \'vue\';\nexport const version = \'self\';'
   const scanner = createScanner(['vue'])
-  await scanner.scanAllDependencies()
+  scanner.scanAllDependencies()
   const codeGen = createCodeGenerator()
   codeGen.injectDependencies(scanner.dependencies)
   const res = await codeGen.transform(code)
   t.is(/'self'/.test(res.code), true)
+})
+
+test('import sub module', async (t) => {
+  const code = 'import { ref } from "vue/dist"; console.log(ref); '
+  const scanner = createScanner([{ name: 'vue', aliases: ['dist'] }])
+  scanner.scanAllDependencies()
+  const codeGen = createCodeGenerator()
+  codeGen.injectDependencies(scanner.dependencies)
+  const res = await codeGen.transform(code)
+  t.is(res.code, 'console.log(Vue.ref);')
 })

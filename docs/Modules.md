@@ -14,3 +14,4 @@ When you pass `string[]` it will be transform as `IModule[]`
 - spare (links that need to be bind to the page)
 - relativeModule (If scanner error, try it)
 - resolve (preset source convert)
+- aliases (sub module name)

@@ -5,12 +5,14 @@ export interface TrackModule {
   global?: string
   spare?: Array<string> | string
   relativeModule?: string
+  aliases?: Array<string>
 }
 
 export interface IIFEModuleInfo extends TrackModule {
   version: string
   unpkg?: string
   jsdelivr?: string
+  exports?: Record<string, any>
 }
 
 export type ResolverFunction = (p: string, extra: IIFEModuleInfo)=> string

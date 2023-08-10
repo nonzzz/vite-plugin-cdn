@@ -1,6 +1,7 @@
 import fsp from 'fs/promises'
 import url from 'url'
 import module from 'module'
+import path from 'path'
 import worker_threads from 'worker_threads'
 import type { MessagePort } from 'worker_threads'
 import { MAX_CONCURRENT, createConcurrentQueue, createVM } from './vm'
@@ -76,29 +77,35 @@ function createWorkerThreads(scannerModule: ScannerModule) {
   return runSync()
 }
 
+
+function serializationExportsFields(moduleName: string, exports: Record<string, any> = {}, aliases = []) {
+  const fields = new Set([...Object.keys(exports), ...aliases])
+  return  Array.from(fields).filter(v => v !== '.').map(v => path.posix.join(moduleName, v))
+}
+
 async function tryResolveModule(
   module: IModule,
   dependenciesMap: Map<string, ModuleInfo>,
   failedModules: Map<string, string>
 ) {
-  const { name: moduleName, relativeModule, ...rest } = module
+  const { name: moduleName, relativeModule, aliases, ...rest } = module
   try {
     const modulePath = _require.resolve(moduleName)
     const packageJsonPath = lookup(modulePath, 'package.json')
     const str = await fsp.readFile(packageJsonPath, 'utf8')
     const packageJSON: IIFEModuleInfo = JSON.parse(str)
-    const { version, name, unpkg, jsdelivr } = packageJSON
+    const { version, name, unpkg, jsdelivr, exports } = packageJSON
     const meta: ModuleInfo = Object.create(null)
     // Most of package has jsdelivr or unpkg field
     // but a small part is not. so we should accept user define.
     const iifeRelativePath = jsdelivr || unpkg || relativeModule
     if (!iifeRelativePath) throw new Error('try resolve file failed.')
     if (rest.global) {
-      Object.assign(meta, { name, version, relativeModule: iifeRelativePath, ...rest })
+      Object.assign(meta, { name, version, relativeModule: iifeRelativePath, aliases: serializationExportsFields(name, exports, aliases), ...rest })
     } else {
       const iifeFilePath = lookup(packageJsonPath, iifeRelativePath)
       const code = await fsp.readFile(iifeFilePath, 'utf8')
-      Object.assign(meta, { name, version, code, relativeModule: iifeRelativePath, ...rest })
+      Object.assign(meta, { name, version, code, relativeModule: iifeRelativePath, aliases: serializationExportsFields(name, exports, aliases), ...rest })
     }
     const pkg = await _import(moduleName)
     const keys = Object.keys(pkg)

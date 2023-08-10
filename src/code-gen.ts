@@ -11,24 +11,39 @@ function isTopLevelCalled(p: NodePath) {
 
 export class CodeGen {
   private dependencies: Map<string, ModuleInfo>
+  private aliasesToDependencies: Map<string, string>
   injectDependencies(dependencies: Map<string, ModuleInfo>) {
     this.dependencies = dependencies
+    this.aliasesToDependencies = new Map()
+    this.dependencies.forEach(({ name, aliases }) => {
+      this.aliasesToDependencies.set(name, name)
+      if (len(aliases)) {
+        aliases.forEach((aliase) => this.aliasesToDependencies.set(aliase, name))
+      }
+    })
   }
 
   filter(code: string, id: string) {
+    // I trust rs-module-lexer
+    // BTW, vite-plugin-external depends on es-module-lexer(v0.4) It doesn't handle 
+    // the correct depenedencies.
+    // eg:
+    // import ReactDOM from 'react-dom/client' => "n" be react-dom
+    // The truth should be react-dom/client 
     const { output } = esModuleLexer({ input: [{ filename: id, code }] })
     if (!len(output)) return false
     const { imports } = output[0]
     const modules = Array.from(new Set([...imports.map(i => i.n)]))
     for (const m of modules) {
-      if (this.dependencies.has(m)) return true
+      if (this.aliasesToDependencies.has(m)) return true
       continue
     }
     return false
   }
 
   private scanImportDeclarationAndRecord(path: NodePath<t.ImportDeclaration>, references: Map<string, string>) {
-    const { global: globalName } = this.dependencies.get(path.node.source.value)
+    const aliase = this.aliasesToDependencies.get(path.node.source.value)
+    const { global: globalName } = this.dependencies.get(aliase)
     for (const specifier of path.node.specifiers) {
       switch (specifier.type) {
         case 'ImportDefaultSpecifier':
@@ -47,8 +62,9 @@ export class CodeGen {
     const nodes: Array<t.VariableDeclarator | t.ObjectExpression | t.MemberExpression> = []
     const natives: Array<t.ExportSpecifier> = []
     const hasBindings = path.node.source
-    const globalName = hasBindings ? this.dependencies.get(path.node.source.value).global : ''
-    const bindings: Set<string> = hasBindings ? this.dependencies.get(path.node.source.value).bindings : new Set()
+    const aliase = hasBindings ? this.aliasesToDependencies.get(path.node.source.value) : ''
+    const globalName = hasBindings && aliase ? this.dependencies.get(aliase).global : ''
+    const bindings: Set<string> = hasBindings && aliase ? this.dependencies.get(aliase).bindings : new Set()
 
     const scanNamedExportsWithSource = (l: t.Identifier, e: t.Identifier, specifier: t.ExportSpecifier) => {
       if (!bindings.size) return
@@ -154,7 +170,8 @@ export class CodeGen {
 
   private overWriteExportAllDeclaration(path: NodePath<t.ExportAllDeclaration>) {
     const nodes: Array<t.ExportSpecifier> = []
-    const { bindings } = this.dependencies.get(path.node.source.value)
+    const aliase = this.aliasesToDependencies.get(path.node.source.value)
+    const { bindings } = this.dependencies.get(aliase)
     bindings.forEach((binding) => {
       const identifier = t.identifier(binding)
       const node = t.exportSpecifier(identifier, identifier)
@@ -210,12 +227,12 @@ export class CodeGen {
     traverse(ast, {
       ImportDeclaration: {
         enter: (path) => {
-          if (this.dependencies.has(path.node.source.value)) {
+          if (this.aliasesToDependencies.has(path.node.source.value)) {
             this.scanImportDeclarationAndRecord(path, references)
           }
         },
         exit: (path) => {
-          if (this.dependencies.has(path.node.source.value)) {
+          if (this.aliasesToDependencies.has(path.node.source.value)) {
             path.remove()
             path.skip()
           }
@@ -225,17 +242,17 @@ export class CodeGen {
         enter: (path) => {
           switch (path.node.type) {
             case 'ExportDefaultDeclaration':
-              if (t.isIdentifier(path.node.declaration) && this.dependencies.has(path.node.declaration.name)) {
+              if (t.isIdentifier(path.node.declaration) && this.aliasesToDependencies.has(path.node.declaration.name)) {
                 path.remove()
               }
               break
             case 'ExportNamedDeclaration':
-              if (this.dependencies.has(path.node.source?.value) || !path.node.declaration) {
+              if (this.aliasesToDependencies.has(path.node.source?.value) || !path.node.declaration) {
                 this.overWriteExportNamedDeclaration(path as NodePath<t.ExportNamedDeclaration>, references)
               }
               break
             case 'ExportAllDeclaration':
-              if (this.dependencies.has(path.node.source.value)) {
+              if (this.aliasesToDependencies.has(path.node.source.value)) {
                 this.overWriteExportAllDeclaration(path as NodePath<t.ExportAllDeclaration>)
               }
           }
