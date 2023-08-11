@@ -1,3 +1,15 @@
+## 0.11.0
+
+### Feature & Improves
+
+- Exports fields willn't be pre-processed.
+- Add `apply` option.
+- Plugin now return an array.
+
+### Patches
+
+- Fix `node_modules` can't processed.
+
 ## 0.10.0
 
 ### Feaature & Improves
