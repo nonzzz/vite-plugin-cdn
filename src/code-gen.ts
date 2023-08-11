@@ -10,8 +10,8 @@ function isTopLevelCalled(p: NodePath) {
 }
 
 export class CodeGen {
-  private dependencies: Map<string, ModuleInfo>
-  private aliasesToDependencies: Map<string, string>
+  dependencies: Map<string, ModuleInfo>
+  aliasesToDependencies: Map<string, string>
   injectDependencies(dependencies: Map<string, ModuleInfo>) {
     this.dependencies = dependencies
     this.aliasesToDependencies = new Map()
@@ -219,6 +219,10 @@ export class CodeGen {
       traverseNode(path)
     }
   }
+
+  // NodeJs "exports" fields seem to be getting more popular.
+  // So we should find a balance way to solve those problem.
+  // If the submodule exists in the module.it can be processed.
 
   async transform(code: string) {
     const ast = await babelParse(code, { babelrc: false, configFile: false })

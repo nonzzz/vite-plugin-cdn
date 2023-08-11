@@ -13,17 +13,15 @@ export default defineConfig(({ command }) => {
     plugins: [
       vue(),
       Components({ resolvers: [VarletUIResolver()] }),
-      {
-        ...cdn({
-          url: 'https://cdn.bootcdn.net/ajax/libs/',
-          modules: ['vue', 'vue-demi', 'pinia', '@varlet/ui', 'axios'],
-          resolve(baseURL, { name, version, relativeModule }) {
-            if (name === '@varlet/ui') return new URL(`${name}@${version}/${relativeModule}`, unpkg).href
-            return new URL(`${name}/${version}/${path.basename(relativeModule)}`, baseURL).href
-          }
-        }),
-        apply: command
-      },
+      cdn({
+        url: 'https://cdn.bootcdn.net/ajax/libs/',
+        modules: ['vue', 'vue-demi', 'pinia', '@varlet/ui', 'axios'],
+        apply: command,
+        resolve(baseURL, { name, version, relativeModule }) {
+          if (name === '@varlet/ui') return new URL(`${name}@${version}/${relativeModule}`, unpkg).href
+          return new URL(`${name}/${version}/${path.basename(relativeModule)}`, baseURL).href
+        }
+      }),
       compression({
         algorithm: 'gzip',
         threshold: 3 * 1024

@@ -1,6 +1,7 @@
 import path from 'path'
 import fs from 'fs'
 import process from 'process'
+import type { CodeGen } from './code-gen'
 
 export function lookup(entry: string, target: string): string {
   const dir = path.dirname(entry)
@@ -34,3 +35,11 @@ export function is(condit: boolean, message: string) {
 // TODO 
 // If we find the correct dynamic import handing it should be removed.
 export const _import = new Function('specifier', 'return import(specifier)')
+
+export function transformCJSRequire(code: string, extenrals: CodeGen['dependencies']) {
+  extenrals.forEach((meta, externalModule) => {
+    const reg = new RegExp(`require\\((["'\`])\\s*${externalModule}\\s*(\\1)\\)`, 'g')
+    code = code.replace(reg, meta.global)
+  })
+  return code
+}

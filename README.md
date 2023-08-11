@@ -46,6 +46,7 @@ export default defineConfig({
 - [`transform`](#transform)
 - [`logLevel`](#logLevel)
 - [`resolve`](#resolve)
+- [`apply`](#apply)
 
 ### include
 
@@ -141,6 +142,14 @@ Type: `ResolverFunction`
 Default: `undefined`
 
 A global url parser.
+
+### apply
+
+Type: `build` | `serve`
+
+Default: `build`
+
+Same as vite command
 
 ### Acknowledgements
 

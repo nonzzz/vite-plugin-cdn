@@ -78,9 +78,8 @@ function createWorkerThreads(scannerModule: ScannerModule) {
 }
 
 
-function serializationExportsFields(moduleName: string, exports: Record<string, any> = {}, aliases = []) {
-  const fields = new Set([...Object.keys(exports), ...aliases])
-  return  Array.from(fields).filter(v => v !== '.').map(v => path.posix.join(moduleName, v))
+function serializationExportsFields(moduleName: string, aliases = []) {
+  return  aliases.filter(v => v !== '.').map(v => path.posix.join(moduleName, v))
 }
 
 async function tryResolveModule(
@@ -94,18 +93,18 @@ async function tryResolveModule(
     const packageJsonPath = lookup(modulePath, 'package.json')
     const str = await fsp.readFile(packageJsonPath, 'utf8')
     const packageJSON: IIFEModuleInfo = JSON.parse(str)
-    const { version, name, unpkg, jsdelivr, exports } = packageJSON
+    const { version, name, unpkg, jsdelivr  } = packageJSON
     const meta: ModuleInfo = Object.create(null)
     // Most of package has jsdelivr or unpkg field
     // but a small part is not. so we should accept user define.
     const iifeRelativePath = jsdelivr || unpkg || relativeModule
     if (!iifeRelativePath) throw new Error('try resolve file failed.')
     if (rest.global) {
-      Object.assign(meta, { name, version, relativeModule: iifeRelativePath, aliases: serializationExportsFields(name, exports, aliases), ...rest })
+      Object.assign(meta, { name, version, relativeModule: iifeRelativePath, aliases: serializationExportsFields(name,  aliases), ...rest })
     } else {
       const iifeFilePath = lookup(packageJsonPath, iifeRelativePath)
       const code = await fsp.readFile(iifeFilePath, 'utf8')
-      Object.assign(meta, { name, version, code, relativeModule: iifeRelativePath, aliases: serializationExportsFields(name, exports, aliases), ...rest })
+      Object.assign(meta, { name, version, code, relativeModule: iifeRelativePath, aliases: serializationExportsFields(name, aliases), ...rest })
     }
     const pkg = await _import(moduleName)
     const keys = Object.keys(pkg)
