@@ -1,3 +1,9 @@
+## 0.11.1
+
+### Patches
+
+- Fix `eraseDuplicatedVariableDeclaration` use error node selector.
+
 ## 0.11.0
 
 ### Feature & Improves
