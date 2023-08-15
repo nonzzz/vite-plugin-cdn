@@ -189,10 +189,10 @@ export class CodeGen {
       if (Array.isArray(path)) return
       if (t.isVariableDeclarator(path.node)) {
         if (t.isObjectPattern(path.node.id) || t.isArrayPattern(path.node.id)) {
-          traverseNode(path.get('node.id'))
+          traverseNode(path.get('id'))
         }
         if (t.isRestElement(path.node.id)) {
-          traverseNode(path.get('node.id.argument'))
+          traverseNode(path.get('id.argument'))
         }
         if (t.isIdentifier(path.node.id)) {
           const def = path.node.id.name

@@ -192,3 +192,5 @@ test('import sub module', async (t) => {
   const res = await codeGen.transform(code)
   t.is(res.code, 'console.log(Vue.ref);')
 })
+
+
