@@ -1,3 +1,10 @@
+## 0.11.2
+
+### Minor
+
+- Bump `happy-dom` version. (Reduce unnecessary installation size).
+- Remove `@types/estree`
+
 ## 0.11.1
 
 ### Patches

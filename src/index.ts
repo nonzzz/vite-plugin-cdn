@@ -59,7 +59,7 @@ function cdn(opts: CDNPluginOptions = {}): Plugin[] {
           scanner.scanAllDependencies()
           debug('scanning done', scanner.dependencies)
           generator.injectDependencies(scanner.dependencies)
-          const plugin =  config.plugins.find(p => p.name === 'vite-plugin-cdn2:presetModule')
+          const plugin = config.plugins.find(p => p.name === 'vite-plugin-cdn2:presetModule')
           if (plugin) {
             const presetModuleApi = plugin.api as PresetModuleApi
             presetModuleApi.injectFilter(filter)
