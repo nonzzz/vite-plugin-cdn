@@ -1,6 +1,6 @@
 //  refer: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script
 import { URL } from 'url'
-import { Window } from 'happy-dom'
+import type { HtmlTagDescriptor } from 'vite'
 import { uniq } from './shared'
 import type { CDNPluginOptions, LinkNode, ModuleInfo, ResolverFunction, ScriptNode } from './interface'
 
@@ -38,34 +38,34 @@ function makeNode(moduleInfo: ModuleInfo): ScriptNode | LinkNode {
 
 class InjectScript {
   private modules: Map<string, LinkNode | ScriptNode>
-  private window: Window
   constructor(modules: Map<string, ModuleInfo>, url: string, resolver?: ResolverFunction) {
     this.modules = this.prepareSource(modules, url, resolver)
-    this.window = new Window()
   }
 
   toTags() {
-    const tags = []
+    const tags: Array<HtmlTagDescriptor> = []
     this.modules.forEach((node) => {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { tag, url, name: _, extra: __, ...restProps } = node
       if (url.size) {
         url.forEach((l) => {
-          const element = this.window.document.createElement(tag)
-          element.setAttribute(tag === 'script' ? 'src' : 'href', l)
+          const descriptor: HtmlTagDescriptor = Object.create(null)
+          descriptor.tag = tag
+          descriptor.injectTo = 'head-prepend'
+          descriptor.attrs = {}
+          descriptor.attrs[tag === 'script' ? 'src' : 'href'] = l
           for (const prop in restProps) {
-            element.setAttribute(prop, restProps[prop])
+            descriptor.attrs[prop] = restProps[prop]
           }
-          tags.push(element.toString())
+          tags.push(descriptor)
         })
       }
     })
     return tags
   }
 
-  text(html: string, transformHook?: CDNPluginOptions['transform']) {
-    const { document } = this.window
-    document.body.innerHTML = html
+
+  calledHook(transformHook?: CDNPluginOptions['transform']) {
     if (transformHook) {
       const hook = transformHook()
       this.modules.forEach((node) => {
@@ -76,13 +76,7 @@ class InjectScript {
           hook.link?.(node)
         }
       })
-    }
-    // issue #6
-    const element = document.body.querySelector('title')
-    const tags = this.toTags()
-    const text = tags.join('\n')
-    element.insertAdjacentHTML('beforebegin', text)
-    return document.body.innerHTML
+    } 
   }
 
   private prepareSource(modules: Map<string, ModuleInfo>, baseURL: string, resolver?: ResolverFunction) {

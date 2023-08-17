@@ -79,7 +79,11 @@ function cdn(opts: CDNPluginOptions = {}): Plugin[] {
       },
       transformIndexHtml(html) {
         const inject = createInjectScript(scanner.dependencies, url, resolver)
-        return inject.text(html, opts.transform)
+        inject.calledHook(opts.transform)
+        return {
+          html,
+          tags: inject.toTags()
+        }
       }
     }
   } 
