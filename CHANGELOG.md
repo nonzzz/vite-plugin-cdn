@@ -1,3 +1,9 @@
+## 0.11.3
+
+### Minor
+
+- `transformIndexHtml` now return HTMLDescriptor (After happy-dom v9 It can't disabled warning logic)
+
 ## 0.11.2
 
 ### Minor
