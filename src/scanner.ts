@@ -4,7 +4,7 @@ import module from 'module'
 import path from 'path'
 import worker_threads from 'worker_threads'
 import type { MessagePort } from 'worker_threads'
-import { MAX_CONCURRENT, createConcurrentQueue, createVM } from './vm'
+import { MAX_CONCURRENT, createConcurrentQueue, tryScannGlobalName } from './vm'
 import { _import, is, len, lookup } from './shared'
 import type { IIFEModuleInfo, IModule, ModuleInfo, ResolverFunction, TrackModule } from './interface'
 
@@ -134,7 +134,6 @@ function startSyncThreads() {
   if (!worker_threads.workerData.internalThread) return
   const { workerPort, scannerModule } = worker_threads.workerData as WorkerData
   const { parentPort } = worker_threads
-  const vm = createVM()
   const dependenciesMap: Map<string, ModuleInfo> = new Map()
   const failedModules: Map<string, string> = new Map()
   parentPort?.on('message', (msg) => {
@@ -142,6 +141,7 @@ function startSyncThreads() {
       const { id, sharedBuffer } = msg
       const sharedBufferView = new Int32Array(sharedBuffer)
       try {
+        const bindings: Map<string, ModuleInfo>  = new Map()
         const queue = createConcurrentQueue(MAX_CONCURRENT)
         for (const module of scannerModule) {
           queue.enqueue(() => tryResolveModule(module, dependenciesMap, failedModules))
@@ -152,16 +152,19 @@ function startSyncThreads() {
           if (dependenciesMap.has(name)) {
             const { code, ...rest } =  dependenciesMap.get(name)
             if (!code) {
-              vm.bindings.set(name, rest)
+              bindings.set(name, rest)
               continue
             }
-            vm.run(code, rest, (err: Error) => {
-              failedModules.set(err.message, 'try resolve global name failed.')
-            })
+            const globalName = await tryScannGlobalName(code)
+            if (!globalName) {
+              failedModules.set(name, 'try resolve global name failed.')
+            } else {
+              bindings.set(name, { ...rest, global: globalName })
+            }
           }
         }
         dependenciesMap.clear()
-        workerPort.postMessage({ bindings: vm.bindings, id, failedModules })
+        workerPort.postMessage({ bindings, id, failedModules })
       } catch (error) {
         workerPort.postMessage({ error, id })
       }

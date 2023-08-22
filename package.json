@@ -74,7 +74,6 @@
     "@babel/core": "^7.22.5",
     "@rollup/pluginutils": "^5.0.2",
     "debug": "^4.3.4",
-    "happy-dom": "^10.10.0",
     "rs-module-lexer": "^1.0.0"
   },
   "ava": {
