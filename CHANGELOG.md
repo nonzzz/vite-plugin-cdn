@@ -1,3 +1,10 @@
+## 0.12.0
+
+### Improve & Features
+
+- Drop `happy-dom`. (Reduce installer size)
+- Using `ast scanner` replace vm.
+
 ## 0.11.3
 
 ### Minor
