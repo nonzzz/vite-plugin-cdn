@@ -17,7 +17,6 @@ interface PresetModuleApi {
 }
 
 function transformPresetModule(apply: 'serve' | 'build'): Plugin {
-  // const generator = createCodeGenerator()
   // Inspired by vite-plugin-external
   const nodeModules = 'node_modules'
   let generator: CodeGen = null

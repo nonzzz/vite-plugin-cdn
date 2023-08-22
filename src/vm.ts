@@ -1,5 +1,5 @@
 import os from 'os'
-import { parse as babelParse, types as t } from '@babel/core'
+import { parse as babelParse, types as t, traverse } from '@babel/core'
 import { len } from './shared'
 
 // After weighing it. I found that it's more efficient to 
@@ -10,60 +10,47 @@ export async function tryScannGlobalName(code: string) {
   const { body } = ast.program
   if (!len(body)) return
   // It's enough to extract only the first node
-  let caller = len(body)
-  let node = body[0]
+  const node = body[0]
   // iife only return the first 
   if (t.isVariableDeclaration(node)) {
     const identifier = node.declarations[0].id
     if (t.isIdentifier(identifier)) return identifier.name
   }
+  const bucket = new Set<string>()
+  let globalName = ''
   // umd
-  while (caller) {
-    if (t.isExpressionStatement(node)) {
-      // TODO
-      // using babel traverse
-      if (!t.isCallExpression(node.expression) && !t.isUnaryExpression(node.expression)) return
-      let _node = node.expression
-      if (_node.type === 'UnaryExpression') {
-        if (t.isCallExpression(_node.argument)) {
-          _node = _node.argument
-        }
-      }
-      const n = _node as t.CallExpression
-      if (t.isFunctionExpression(n.callee)) {
-        const statement = n.callee.body.body.find(v => t.isExpressionStatement(v))
-        if (!statement) return
-        if (statement.type === 'ExpressionStatement' && 'alternate' in statement.expression) {
-          const { alternate } = statement.expression.alternate as any
-          if (t.isAssignmentExpression(alternate)) {
-            if (t.isMemberExpression(alternate.left)) {
-              const prop = alternate.left.property
-              if (prop.type === 'Identifier') return prop.name
-            }
-          }
-          if (t.isSequenceExpression(alternate)) {
-            const { expressions } = alternate
-            if (len(expressions)) {
-              let expr = expressions.pop()
-              while (!t.isCallExpression(expr)) {
-                expr = expressions.pop()
+  traverse(ast, {
+    ExpressionStatement: (path) => {
+      if (t.isCallExpression(path.node.expression)) {
+        if (t.isFunctionExpression(path.node.expression.callee)) {
+          const params = path.node.expression.callee.params
+          if (len(params)) {
+            params.forEach((i) => {
+              if (i.type === 'Identifier') {
+                bucket.add(i.name)
               }
-              const assignNode = expr.arguments.find(v => t.isAssignmentExpression(v))
-              if (assignNode && t.isAssignmentExpression(assignNode)) {
-                if (t.isMemberExpression(assignNode.left)) {
-                  const prop = assignNode.left.property
-                  if (prop.type === 'Identifier') return prop.name
-                }
-              }
-            }
+            })
           }
         }
       }
-      return 
+    },
+    AssignmentExpression: (path) => {
+      const op = path.get('left')
+      if (
+        op.node.type === 'MemberExpression' &&
+        (path.parent.type === 'CallExpression' || path.parent.type === 'ConditionalExpression' || path.parent.type === 'ExpressionStatement')
+      ) {
+        if (!globalName) {
+          if (t.isIdentifier(op.node.object) && !bucket.has(op.node.object.name)) return
+          if (!t.isIdentifier(op.node.property)) return
+          if (op.node.property.name === 'exports') return
+          globalName = op.node.property.name
+        }
+      }
+      path.skip()
     }
-    caller--
-    node = body[caller]
-  }
+  })
+  return globalName
 }
 
 export const MAX_CONCURRENT = (() => {
