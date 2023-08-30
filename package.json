@@ -72,6 +72,7 @@
   },
   "dependencies": {
     "@babel/core": "^7.22.5",
+    "@nolyfill/es-aggregate-error": "^1.0.20",
     "@rollup/pluginutils": "^5.0.2",
     "debug": "^4.3.4",
     "rs-module-lexer": "^1.0.0"

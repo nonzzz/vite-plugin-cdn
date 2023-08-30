@@ -11,5 +11,6 @@ test('task queue', async (t) => {
     queue.enqueue(task)
   }
   const err = await t.throwsAsync(queue.wait())
-  t.is(err?.message, '3')
+  t.is(err instanceof AggregateError, true)
+  t.is((err as AggregateError).errors[0].message, '3')
 })

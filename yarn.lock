@@ -455,10 +455,22 @@
     "@nodelib/fs.scandir" "2.1.5"
     fastq "^1.6.0"
 
+"@nolyfill/es-aggregate-error@^1.0.20":
+  version "1.0.20"
+  resolved "https://registry.yarnpkg.com/@nolyfill/es-aggregate-error/-/es-aggregate-error-1.0.20.tgz#557dfabb0c5f2dd23f9e5591a97ce77950609239"
+  integrity sha512-20g56zUz6gIzDQ47O+uYQRMmu0tcfdTFl2MOu8B9pvM1sa5jKstsbSaush2J9FyZFKm4lLW7s4bWcSspA8KEdA==
+  dependencies:
+    "@nolyfill/shared" "1.0.20"
+
 "@nolyfill/shared@1.0.14":
   version "1.0.14"
   resolved "https://registry.yarnpkg.com/@nolyfill/shared/-/shared-1.0.14.tgz#f4ffd84e0f6368ad0ca96cba44efc7affe82f5a5"
   integrity sha512-LiFjeoJ8l6j02L/nxk+j/pW9vQjEat4hcgQKsBrPzWtBW/f4vSdpkTavR03dSzx/OGTId+9y1OOXhLsybCmOug==
+
+"@nolyfill/shared@1.0.20":
+  version "1.0.20"
+  resolved "https://registry.yarnpkg.com/@nolyfill/shared/-/shared-1.0.20.tgz#a97422f57f962d6ccacacaafe0f4e840d167269f"
+  integrity sha512-Ge3eGlvTMid2vAdH0WtN0xL3DvTUz37uCVMDiYVy0urzc/Hj9khbBxs67+fuGNLI9617rVT52AXcCEHarEF63w==
 
 "@rollup/plugin-json@^6.0.0":
   version "6.0.0"

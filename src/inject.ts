@@ -49,10 +49,11 @@ class InjectScript {
       const { tag, url, name: _, extra: __, ...restProps } = node
       if (url.size) {
         url.forEach((l) => {
-          const descriptor: HtmlTagDescriptor = Object.create(null)
-          descriptor.tag = tag
-          descriptor.injectTo = 'head-prepend'
-          descriptor.attrs = {}
+          const descriptor: HtmlTagDescriptor = {
+            tag,
+            injectTo: 'head-prepend',
+            attrs: {}
+          }
           descriptor.attrs[tag === 'script' ? 'src' : 'href'] = l
           for (const prop in restProps) {
             descriptor.attrs[prop] = restProps[prop]

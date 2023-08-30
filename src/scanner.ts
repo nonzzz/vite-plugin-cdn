@@ -4,7 +4,7 @@ import module from 'module'
 import path from 'path'
 import worker_threads from 'worker_threads'
 import type { MessagePort } from 'worker_threads'
-import { MAX_CONCURRENT, createConcurrentQueue, tryScannGlobalName } from './vm'
+import { MAX_CONCURRENT, createConcurrentQueue, tryScanGlobalName } from './vm'
 import { _import, is, len, lookup } from './shared'
 import type { IIFEModuleInfo, IModule, ModuleInfo, ResolverFunction, TrackModule } from './interface'
 
@@ -44,7 +44,7 @@ interface ThreadMessage {
   bindings: Map<string, ModuleInfo>, 
   failedModules: Map<string, string>
   id: number
-  error: Error
+  error: Error | AggregateError
 }
 
 function createWorkerThreads(scannerModule: ScannerModule) {
@@ -79,7 +79,7 @@ function createWorkerThreads(scannerModule: ScannerModule) {
 
 
 function serializationExportsFields(moduleName: string, aliases = []) {
-  return  aliases.filter(v => v !== '.').map(v => path.posix.join(moduleName, v))
+  return aliases.filter(v => v !== '.').map(v => path.posix.join(moduleName, v))
 }
 
 async function tryResolveModule(
@@ -155,7 +155,7 @@ function startSyncThreads() {
               bindings.set(name, rest)
               continue
             }
-            const globalName = await tryScannGlobalName(code)
+            const globalName = await tryScanGlobalName(code)
             if (!globalName) {
               failedModules.set(name, 'try resolve global name failed.')
             } else {

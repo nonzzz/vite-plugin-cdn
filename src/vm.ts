@@ -1,11 +1,11 @@
 import os from 'os'
 import { parse as babelParse, types as t, traverse } from '@babel/core'
+import AggregateError from '@nolyfill/es-aggregate-error'
 import { len } from './shared'
 
-// After weighing it. I found that it's more efficient to 
-// use ast hit.
+// It's a relatively reliable method to infer global name
 
-export async function tryScannGlobalName(code: string) {
+export async function tryScanGlobalName(code: string) {
   const ast = await babelParse(code, { babelrc: false, configFile: false })
   const { body } = ast.program
   if (!len(body)) return
@@ -96,8 +96,7 @@ class Queue {
       await new Promise((resolve) => setTimeout(resolve, 0))
     }
     if (len(this.errors)) {
-      const message  = this.errors.reduce((acc, cur) => acc += cur.message, '')
-      throw new Error(message)
+      throw new AggregateError(this.errors, 'failed')
     }
   }
 }
