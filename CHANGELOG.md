@@ -1,3 +1,9 @@
+## 0.12.1
+
+### Patches
+
+- Fix `server` mode can't process dependencies.
+
 ## 0.12.0
 
 ### Improve & Features
