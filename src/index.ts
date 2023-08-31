@@ -67,6 +67,12 @@ function cdn(opts: CDNPluginOptions = {}): Plugin[] {
           if (logLevel === 'warn') {
             scanner.failedModules.forEach((errorMessage, name) => config.logger.error(`vite-plugin-cdn2: ${name} ${errorMessage ? errorMessage : 'resolved failed.Please check it.'}`))
           }
+          // work for serve mode
+          // https://vitejs.dev/config/dep-optimization-options.html
+          if (apply === 'serve') {
+            const exclude = config.optimizeDeps?.exclude || []
+            config.optimizeDeps.exclude = [...exclude, ...scanner.dependencies.keys()]
+          }
         } catch (error) {
           config.logger.error(error)
         }
