@@ -69,9 +69,12 @@ function cdn(opts: CDNPluginOptions = {}): Plugin[] {
           }
           // work for serve mode
           // https://vitejs.dev/config/dep-optimization-options.html
+          // include and exclude are mutually exclusive
           if (apply === 'serve') {
             const exclude = config.optimizeDeps?.exclude || []
             config.optimizeDeps.exclude = [...exclude, ...scanner.dependencies.keys()]
+            const include = config.optimizeDeps?.include || []
+            config.optimizeDeps.include = include.filter(dep => !config.optimizeDeps.exclude.includes(dep))
           }
         } catch (error) {
           config.logger.error(error)
