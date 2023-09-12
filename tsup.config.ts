@@ -1,5 +1,6 @@
 import type { Options } from 'tsup'
 
+
 export const tsup: Options = {
   entry: ['src/index.ts', 'src/url.ts', 'src/scanner.ts'],
   dts: true,
@@ -7,14 +8,22 @@ export const tsup: Options = {
   splitting: true,
   clean: true,
   shims: false,
+  minify: true,
   esbuildOptions(options, { format }) {
     if (format === 'cjs') {
       options.define = {
         'import.meta.url': '__meta.url'
       }
-      options.banner = {
-        js: "const __meta = { url: require('url').pathToFileURL(__filename).href }"
+    }
+  },
+  plugins: [{
+    name: 'inject-meta',
+    renderChunk(code) {
+      if (/__meta.url/.test(code)) {
+        return {
+          code: `const __meta = /* @__PURE__ */{ url: require('url').pathToFileURL(__filename).href };\r\n${code}`
+        }
       }
     }
-  }
+  }]
 }
