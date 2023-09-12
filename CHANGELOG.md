@@ -1,3 +1,17 @@
+## 0.12.2
+
+### Improves
+
+- Perf type DX (#19 #20)
+### Patches
+
+- Fix `server` mode can't work with some libs.
+
+### Credits
+
+@Yukai @nonzzz
+
+
 ## 0.12.1
 
 ### Patches
