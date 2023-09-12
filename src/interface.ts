@@ -17,13 +17,13 @@ export interface IIFEModuleInfo extends TrackModule {
 
 export type ResolverFunction = (p: string, extra: IIFEModuleInfo)=> string
 
-export interface ModuleInfo extends IIFEModuleInfo{
+export interface ModuleInfo extends IIFEModuleInfo {
   bindings: Set<string>
   code?: string
   resolve?: string | ResolverFunction
 }
 
-export interface IModule extends TrackModule{
+export interface IModule extends TrackModule {
   resolve?: string | ResolverFunction
 }
 
@@ -76,7 +76,14 @@ export interface InjectVisitor {
   link?: (node: LinkNode)=> void
 }
 
-export interface CDNPluginOptions {
+type Pretty<T> = {
+  [key in keyof T]:
+  T[key] extends (...args: any[])=> any
+  ? (...args: Parameters<T[key]>)=> any
+  : T[key] & NonNullable<unknown>
+} & NonNullable<unknown>
+
+export type CDNPluginOptions = Pretty<{
   modules?: Array<IModule | string>
   url?: string
   transform?: ()=> InjectVisitor
@@ -85,4 +92,4 @@ export interface CDNPluginOptions {
   logLevel?: 'slient' | 'warn'
   resolve?: ResolverFunction
   apply?: 'build' | 'serve',
-}
+}>
