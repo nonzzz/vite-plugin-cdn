@@ -1,3 +1,13 @@
+## 0.12.3
+
+### Improve
+
+- `relativeModule` option first. (#22)
+
+### Patches
+
+- Fix node gen. (#23)
+
 ## 0.12.2
 
 ### Improves
@@ -9,7 +19,7 @@
 
 ### Credits
 
-@Yukai @nonzzz
+@mengdaoshizhongxinyang @nonzzz
 
 
 ## 0.12.1
