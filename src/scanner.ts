@@ -97,7 +97,7 @@ async function tryResolveModule(
     const meta: ModuleInfo = Object.create(null)
     // Most of package has jsdelivr or unpkg field
     // but a small part is not. so we should accept user define.
-    const iifeRelativePath = jsdelivr || unpkg || relativeModule
+    const iifeRelativePath = relativeModule || jsdelivr || unpkg 
     if (!iifeRelativePath) throw new Error('try resolve file failed.')
     if (rest.global) {
       Object.assign(meta, { name, version, relativeModule: iifeRelativePath, aliases: serializationExportsFields(name,  aliases), ...rest })

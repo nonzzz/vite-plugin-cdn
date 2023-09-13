@@ -48,18 +48,18 @@ export class CodeGen {
       switch (specifier.type) {
         case 'ImportDefaultSpecifier':
         case 'ImportNamespaceSpecifier':
-          references.set(specifier.local.name, globalName)
+          references.set(specifier.local.name, `${globalName}.${specifier.type}.${aliase}`)
           break
         case 'ImportSpecifier':
           if (specifier.imported.type === 'Identifier') {
-            references.set(specifier.local.name, `${globalName}.${specifier.imported.name}`)
+            references.set(specifier.local.name, `${globalName}.${specifier.imported.name}.${aliase}`)
           }
       }
     }
   }
 
   private overWriteExportNamedDeclaration(path: NodePath<t.ExportNamedDeclaration>, references: Map<string, string>) {
-    const nodes: Array<t.VariableDeclarator | t.ObjectExpression | t.MemberExpression> = []
+    const nodes: Array<t.VariableDeclarator | t.ObjectExpression | t.MemberExpression | t.Identifier> = []
     const natives: Array<t.ExportSpecifier> = []
     const hasBindings = path.node.source
     const aliase = hasBindings ? this.aliasesToDependencies.get(path.node.source.value) : ''
@@ -100,15 +100,19 @@ export class CodeGen {
 
     const scanNamedExportsWithoutSource = (l: t.Identifier, e: t.Identifier, specifier: t.ExportSpecifier) => {
       if (references.has(l.name)) {
-        const [o, p] = references.get(l.name).split('.')
+        const [o, p, a] = references.get(l.name).split('.')
+        const memberExpression = (() => {
+          if (p === 'ImportNamespaceSpecifier') {
+            const memberExpression = (p) => t.memberExpression(t.identifier(o), t.identifier(p))
+            return t.objectExpression([...this.dependencies.get(a).bindings.keys()].map(p => t.objectProperty(t.identifier(p), memberExpression(p))))
+          }
+          return t.memberExpression(t.identifier(o), t.identifier(p))
+        })()
         if (e.name === 'default') {
-          const node = t.memberExpression(t.identifier(o), t.identifier(p))
-          nodes.push(node)
-          return
+          nodes.push(memberExpression)
+        } else {
+          nodes.push(t.variableDeclarator(t.identifier(l.name), memberExpression))
         }
-        const memberExpression = t.memberExpression(t.identifier(o), t.identifier(p))
-        const node = t.variableDeclarator(t.identifier(l.name), memberExpression)
-        nodes.push(node)
         return 
       }
       natives.push(specifier)
@@ -157,11 +161,11 @@ export class CodeGen {
       }
     }
     if (len(variableDeclaratorNodes)) {
-      const variableDeclaration = t.variableDeclaration('const', variableDeclaratorNodes)
+      const variableDeclaration = t.variableDeclaration('var', variableDeclaratorNodes)
       if (len(natives)) {
         const exportNamedDeclaration = t.exportNamedDeclaration(null, natives)
         path.replaceWith(exportNamedDeclaration)
-        path.insertAfter(variableDeclaration)
+        path.insertAfter(t.exportNamedDeclaration(variableDeclaration, []))
       } else {
         path.replaceWith(t.exportNamedDeclaration(variableDeclaration, []))
       }
@@ -279,7 +283,13 @@ export class CodeGen {
       Identifier: (path) => {
         if (t.isReferenced(path.node, path.parent) && references.has(path.node.name)) {
           if (!path.scope.hasBinding(path.node.name)) {
-            path.node.name = references.get(path.node.name)
+            const [o, p] = references.get(path.node.name).split('.')
+            if (p === 'ImportNamespaceSpecifier') {
+              path.node.name = o
+            } else {
+              path.node.name = [o, p].join('.')
+            }
+
             path.skip()
           }
         }

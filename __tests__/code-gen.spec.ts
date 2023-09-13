@@ -41,7 +41,7 @@ test('exports loose source', async (t) => {
   const codeGen = createCodeGenerator()
   codeGen.injectDependencies(scanner.dependencies)
   const res = await codeGen.transform(code)
-  t.is(res.code, 'export const version = Vue.version;')
+  t.is(res.code, 'export var version = Vue.version;')
 })
 
 test('exports loose source and re named exported name', async (t) => {
@@ -51,7 +51,7 @@ test('exports loose source and re named exported name', async (t) => {
   const codeGen = createCodeGenerator()
   codeGen.injectDependencies(scanner.dependencies)
   const res = await codeGen.transform(code)
-  t.is(res.code, 'export const version = Vue.version;\nexport default Vue.version;')
+  t.is(res.code, 'export var version = Vue.version;\nexport default Vue.version;')
 })
 
 test('exports loose source and export self module', async (t) => {
@@ -61,7 +61,7 @@ test('exports loose source and export self module', async (t) => {
   const codeGen = createCodeGenerator()
   codeGen.injectDependencies(scanner.dependencies)
   const res = await codeGen.transform(code)
-  t.is(res.code, 'const t = \'nonzzz\';\nexport { t };\nconst version = Vue.version;\nexport default Vue.ref;')
+  t.is(res.code, 'const t = \'nonzzz\';\nexport { t };\nexport var version = Vue.version;\nexport default Vue.ref;')
 })
 
 test('exports with source', async (t) => {
@@ -71,7 +71,7 @@ test('exports with source', async (t) => {
   const codeGen = createCodeGenerator()
   codeGen.injectDependencies(scanner.dependencies)
   const res = await codeGen.transform(code)
-  t.is(res.code, 'export const ref = Vue.ref,\n  version = Vue.version;')
+  t.is(res.code, 'export var ref = Vue.ref,\n  version = Vue.version;')
 })
 
 test('exports with source and re named local name', async (t) => {
@@ -102,7 +102,7 @@ test('exports with source and re named exported name', async (t) => {
   const codeGen = createCodeGenerator()
   codeGen.injectDependencies(scanner.dependencies)
   const res = await codeGen.transform(code)
-  t.is(res.code, 'export const ref = Vue.ref;\nexport default Vue.version;')
+  t.is(res.code, 'export var ref = Vue.ref;\nexport default Vue.version;')
 })
 
 test('export all with source and re named it with default', async (t) => {
