@@ -1,3 +1,9 @@
+## 0.12.4
+
+### Patches
+
+- Fix code gen.
+
 ## 0.12.3
 
 ### Improve
