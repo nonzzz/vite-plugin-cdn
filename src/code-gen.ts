@@ -284,7 +284,7 @@ export class CodeGen {
         if (t.isReferenced(path.node, path.parent) && references.has(path.node.name)) {
           if (!path.scope.hasBinding(path.node.name)) {
             const [o, p] = references.get(path.node.name).split('.')
-            if (p === 'ImportNamespaceSpecifier') {
+            if (p === 'ImportNamespaceSpecifier' || p === 'ImportDefaultSpecifier') {
               path.node.name = o
             } else {
               path.node.name = [o, p].join('.')
