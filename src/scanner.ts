@@ -4,9 +4,9 @@ import module from 'module'
 import path from 'path'
 import worker_threads from 'worker_threads'
 import type { MessagePort } from 'worker_threads'
-import { MAX_CONCURRENT, createConcurrentQueue, tryScanGlobalName } from './vm'
-import { _import, is, len, lookup } from './shared'
-import type { IIFEModuleInfo, IModule, ModuleInfo, ResolverFunction, TrackModule } from './interface'
+import { tryScanGlobalName } from './code-gen'
+import { MAX_CONCURRENT, _import, createConcurrentQueue, is, len, lookup } from './shared'
+import type { IIFEModuleInfo, IModule, Module, ModuleInfo, ResolverFunction, TrackModule } from './interface'
 
 // This file is a simply dependencies scanner.
 // We won't throw any error unless it's an internal thread error(such as pid not equal)
@@ -82,6 +82,19 @@ function serializationExportsFields(moduleName: string, aliases = []) {
   return aliases.filter(v => v !== '.').map(v => path.posix.join(moduleName, v))
 }
 
+export async function getPackageExports(module: Module) {
+  const { name } = module
+  const pkg = await _import(name)
+  const keys = Object.keys(pkg)
+  if (keys.includes('default') && len(keys) !== 1) {
+    const pos = keys.findIndex((k) => k === 'default')
+    keys.splice(pos, 1)
+    keys.push(...Object.keys(pkg.default))
+  }
+  const bindings = new Set(keys.filter(v => v !== '__esModule'))
+  return bindings
+}
+
 async function tryResolveModule(
   module: IModule,
   dependenciesMap: Map<string, ModuleInfo>,
@@ -106,15 +119,7 @@ async function tryResolveModule(
       const code = await fsp.readFile(iifeFilePath, 'utf8')
       Object.assign(meta, { name, version, code, relativeModule: iifeRelativePath, aliases: serializationExportsFields(name, aliases), ...rest })
     }
-    const pkg = await _import(moduleName)
-    const keys = Object.keys(pkg)
-    // If it's only exports by default
-    if (keys.includes('default') && len(keys) !== 1) {
-      const pos = keys.findIndex((k) => k === 'default')
-      keys.splice(pos, 1)
-      keys.push(...Object.keys(pkg.default))
-    }
-    const bindings = new Set(keys.filter(v => v !== '__esModule'))
+    const bindings = await getPackageExports(module)
     dependenciesMap.set(name, { ...meta, bindings })
   } catch (error) {
     const message = (() => {

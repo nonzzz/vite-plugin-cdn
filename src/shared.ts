@@ -1,7 +1,10 @@
 import path from 'path'
 import fs from 'fs'
+import os from 'os'
 import process from 'process'
+import AggregateError from '@nolyfill/es-aggregate-error'
 import type { CodeGen } from './code-gen'
+
 
 export function lookup(entry: string, target: string): string {
   const dir = path.dirname(entry)
@@ -42,4 +45,56 @@ export function transformCJSRequire(code: string, extenrals: CodeGen['dependenci
     code = code.replace(reg, meta.global)
   })
   return code
+}
+
+export const MAX_CONCURRENT = (() => {
+  //  https://github.com/nodejs/node/issues/19022
+  const cpus = os.cpus() || { length: 1 }
+  return Math.max(1, cpus.length - 1)
+})()
+
+class Queue {
+  maxConcurrent: number
+  queue: Array<()=> Promise<void>>
+  running: number
+  errors: Error[]
+  constructor(maxConcurrent: number) {
+    this.maxConcurrent = maxConcurrent
+    this.queue = []
+    this.running = 0
+    this.errors = []
+  }
+
+  enqueue(task: ()=> Promise<void>) {
+    this.queue.push(task)
+    this.run()
+  }
+
+  async run() {
+    while (this.running < this.maxConcurrent && this.queue.length) {
+      const task = this.queue.shift()
+      this.running++
+      try {
+        await task?.()
+      } catch (err) {
+        this.errors.push(err)
+      } finally {
+        this.running--
+        this.run()
+      }
+    }
+  }
+
+  async wait() {
+    while (this.running) {
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    }
+    if (len(this.errors)) {
+      throw new AggregateError(this.errors, 'failed')
+    }
+  }
+}
+
+export function createConcurrentQueue(max: number) {
+  return new Queue(max)
 }

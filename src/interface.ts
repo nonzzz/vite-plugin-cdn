@@ -1,8 +1,11 @@
 import type { FilterPattern } from '@rollup/pluginutils'
 
-export interface TrackModule {
+export interface Module {
   name: string
   global?: string
+}
+
+export interface TrackModule extends Module{
   spare?: Array<string> | string
   relativeModule?: string
   aliases?: Array<string>
@@ -12,7 +15,6 @@ export interface IIFEModuleInfo extends TrackModule {
   version: string
   unpkg?: string
   jsdelivr?: string
-  exports?: Record<string, any>
 }
 
 export type ResolverFunction = (p: string, extra: IIFEModuleInfo)=> string
@@ -92,4 +94,10 @@ export type CDNPluginOptions = Pretty<{
   logLevel?: 'slient' | 'warn'
   resolve?: ResolverFunction
   apply?: 'build' | 'serve',
+}>
+
+export type ExternalPluginOptions = Pretty<{
+  modules?: Array<Required<Module>>
+  include?: FilterPattern
+  exclude?: FilterPattern
 }>
