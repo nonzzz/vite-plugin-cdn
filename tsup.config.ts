@@ -9,6 +9,7 @@ export const tsup: Options = {
   clean: true,
   shims: false,
   minify: true,
+  noExternal: ['@nolyfill/es-aggregate-error'],
   esbuildOptions(options, { format }) {
     if (format === 'cjs') {
       options.define = {
