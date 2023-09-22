@@ -1,8 +1,7 @@
 {
     "name": "vite-plugin-cdn2-e2e-vite2",
-    "private": "true",
     "dependencies": {
-      "vite": "^2",
-      "@vitejs/plugin-vue": "^2.3.4"
+        "@vitejs/plugin-vue": "^2.3.4",
+        "vite": "^2"
     }
 }

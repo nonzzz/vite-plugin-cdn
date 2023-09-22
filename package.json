@@ -6,14 +6,14 @@
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "workspaces": [
-    "examples/*"
+    "examples/*",
+    "e2e/*"
   ],
   "scripts": {
     "build": "tsup",
     "test": "c8 -r=lcov ava __tests__/*.spec.ts",
     "lint": "eslint . --fix",
     "dev": "tsup --watch src",
-    "prepare:e2e": "cd e2e && npm run installer",
     "e2e": "ava e2e/**/*.spec.ts"
   },
   "keywords": [
