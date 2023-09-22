@@ -232,6 +232,8 @@ export class CodeGen {
     const ast = await babelParse(code, { babelrc: false, configFile: false })
     const references: Map<string, string> = new Map()
     const declarations: Map<string, NodePath<t.Declaration | t.Node>> = new Map()
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
     traverse(ast, {
       ImportDeclaration: {
         enter: (path) => {
@@ -295,6 +297,8 @@ export class CodeGen {
         }
       }
     })
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
     const result = await transformFromAstAsync(ast, '', { babelrc: false, configFile: false, sourceMaps: true })
     return {
       code: result.code,
@@ -315,6 +319,8 @@ export async function tryScanGlobalName(code: string) {
   // It's enough to extract only the first node
   const node = body[0]
   // iife only return the first 
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore
   if (t.isVariableDeclaration(node)) {
     const identifier = node.declarations[0].id
     if (t.isIdentifier(identifier)) return identifier.name
@@ -322,6 +328,8 @@ export async function tryScanGlobalName(code: string) {
   const bucket = new Set<string>()
   let globalName = ''
   // umd
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore
   traverse(ast, {
     ExpressionStatement: (path) => {
       if (t.isCallExpression(path.node.expression)) {

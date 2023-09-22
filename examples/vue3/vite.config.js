@@ -15,7 +15,7 @@ export default defineConfig(({ command }) => {
       Components({ resolvers: [VarletUIResolver()] }),
       cdn({
         url: 'https://cdn.bootcdn.net/ajax/libs/',
-        modules: ['vue', 'vue-demi', 'pinia', '@varlet/ui', 'axios'],
+        modules: ['vue', 'vue-demi', 'pinia', 'axios'],
         apply: command,
         resolve(baseURL, { name, version, relativeModule }) {
           if (name === '@varlet/ui') return new URL(`${name}@${version}/${relativeModule}`, unpkg).href

@@ -2,23 +2,23 @@
     "name": "vue3-example",
     "type": "module",
     "scripts": {
-      "dev": "set DEBUG=vite-plugin-cdn2 & vite",
-      "build": "set DEBUG=vite-plugin-cdn2 & vite build",
-      "preview": "vite preview"
+        "dev": "set DEBUG=vite-plugin-cdn2 & vite",
+        "build": "set DEBUG=vite-plugin-cdn2 & vite build",
+        "preview": "vite preview"
     },
     "devDependencies": {
-      "@vitejs/plugin-vue": "^4.2.1",
-      "unplugin-vue-components": "^0.24.1",
-      "vite": "^4",
-      "vite-plugin-cdn2": "file:../../",
-      "vite-plugin-compression2":"^0.10.2",
-      "vite-plugin-inspect": "^0.7.26"
+        "@vitejs/plugin-vue": "^4.2.1",
+        "unplugin-vue-components": "^0.24.1",
+        "vite": "^4",
+        "vite-plugin-cdn2": "workspace: *",
+        "vite-plugin-compression2": "^0.10.2",
+        "vite-plugin-inspect": "^0.7.26"
     },
     "dependencies": {
-      "@varlet/ui": "^2.10.2",
-      "axios": "^1.4.0",
-      "pinia": "^2.1.6",
-      "vue":"^3.3.4"
+        "@varlet/ui": "^2.10.2",
+        "axios": "^1.4.0",
+        "pinia": "^2.1.6",
+        "vue": "^3.3.4",
+        "vue-demi": "^0.14.6"
     }
-  }
-  
+}

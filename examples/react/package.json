@@ -9,7 +9,7 @@
     "@types/react-dom": "^18.2.7",
     "@vitejs/plugin-react": "^4.0.4",
     "vite": "^4",
-    "vite-plugin-cdn2": "file:../../",
+    "vite-plugin-cdn2": "workspace: *",
     "vite-plugin-inspect": "^0.7.38"
   },
   "dependencies": {

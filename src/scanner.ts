@@ -33,6 +33,7 @@ interface WorkerData {
     scannerModule: IModule[]
     workerPort: MessagePort
     internalThread: boolean
+    defaultWd: string
 }
 
 interface ScannerModule {
@@ -47,10 +48,10 @@ interface ThreadMessage {
   error: Error | AggregateError
 }
 
-function createWorkerThreads(scannerModule: ScannerModule) {
+function createWorkerThreads(scannerModule: ScannerModule, defaultWd: string) {
   const { port1: mainPort, port2: workerPort } = new worker_threads.MessageChannel()
   const worker = new worker_threads.Worker(___filename, {
-    workerData: { workerPort, internalThread: true, scannerModule: scannerModule.modules },
+    workerData: { workerPort, internalThread: true, scannerModule: scannerModule.modules, defaultWd },
     transferList: [workerPort],
     execArgv: []
   })
@@ -82,9 +83,25 @@ function serializationExportsFields(moduleName: string, aliases = []) {
   return aliases.filter(v => v !== '.').map(v => path.posix.join(moduleName, v))
 }
 
-export async function getPackageExports(module: Module) {
-  const { name } = module
-  const pkg = await _import(name)
+export function getPackageExports(modulePath: string): Promise<Set<string>>
+export function getPackageExports(module: Module, defaultWd: string): Promise<Set<string>>
+export async function getPackageExports(...argvs: [string | Module, string?]) {
+  let pkg: Record<string, unknown>
+  switch (len(argvs)) {
+    case 1: {
+      const modulePath = argvs[0]
+      if (typeof modulePath !== 'string') throw new Error('Invalid type')
+      pkg = await _import(url.pathToFileURL(modulePath))
+      break
+    }
+    case 2: {
+      const [module, defaultWd] = argvs
+      if (typeof module !== 'object')  throw new Error('Invalid type')
+      const modulePath = _require.resolve(module.name, { paths: [defaultWd] })
+      pkg = await _import(url.pathToFileURL(modulePath))
+      break
+    }
+  }
   const keys = Object.keys(pkg)
   if (keys.includes('default') && len(keys) !== 1) {
     const pos = keys.findIndex((k) => k === 'default')
@@ -98,11 +115,12 @@ export async function getPackageExports(module: Module) {
 async function tryResolveModule(
   module: IModule,
   dependenciesMap: Map<string, ModuleInfo>,
-  failedModules: Map<string, string>
+  failedModules: Map<string, string>,
+  defaultWd: string
 ) {
   const { name: moduleName, relativeModule, aliases, ...rest } = module
   try {
-    const modulePath = _require.resolve(moduleName)
+    const modulePath = _require.resolve(moduleName, { paths: [defaultWd] })
     const packageJsonPath = lookup(modulePath, 'package.json')
     const str = await fsp.readFile(packageJsonPath, 'utf8')
     const packageJSON: IIFEModuleInfo = JSON.parse(str)
@@ -119,7 +137,7 @@ async function tryResolveModule(
       const code = await fsp.readFile(iifeFilePath, 'utf8')
       Object.assign(meta, { name, version, code, relativeModule: iifeRelativePath, aliases: serializationExportsFields(name, aliases), ...rest })
     }
-    const bindings = await getPackageExports(module)
+    const bindings = await getPackageExports(modulePath)
     dependenciesMap.set(name, { ...meta, bindings })
   } catch (error) {
     const message = (() => {
@@ -137,7 +155,7 @@ async function tryResolveModule(
 
 function startSyncThreads() {
   if (!worker_threads.workerData.internalThread) return
-  const { workerPort, scannerModule } = worker_threads.workerData as WorkerData
+  const { workerPort, scannerModule, defaultWd } = worker_threads.workerData as WorkerData
   const { parentPort } = worker_threads
   const dependenciesMap: Map<string, ModuleInfo> = new Map()
   const failedModules: Map<string, string> = new Map()
@@ -149,7 +167,7 @@ function startSyncThreads() {
         const bindings: Map<string, ModuleInfo>  = new Map()
         const queue = createConcurrentQueue(MAX_CONCURRENT)
         for (const module of scannerModule) {
-          queue.enqueue(() => tryResolveModule(module, dependenciesMap, failedModules))
+          queue.enqueue(() => tryResolveModule(module, dependenciesMap, failedModules, defaultWd))
         }
         await queue.wait()
         for (const module of scannerModule) {
@@ -187,15 +205,21 @@ class Scanner {
   modules: Array<IModule | string>
   dependencies: Map<string, ModuleInfo>
   failedModules: Map<string, string>
+  private defaultWd: string
   constructor(modules: Array<IModule | string>) {
     this.modules = modules
     this.dependencies = new Map()
     this.failedModules = new Map()
+    this.defaultWd = process.cwd()
+  }
+
+  public setDefaultWd(defaultWd) {
+    this.defaultWd = defaultWd
   }
 
   public scanAllDependencies() {
     // we won't throw any exceptions inside this task.
-    const res = createWorkerThreads(this.serialization(this.modules))
+    const res = createWorkerThreads(this.serialization(this.modules), this.defaultWd)
     this.dependencies = res.dependencies
     this.failedModules = res.failedModules
   }

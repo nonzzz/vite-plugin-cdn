@@ -5,6 +5,9 @@
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
+  "workspaces": [
+    "examples/*"
+  ],
   "scripts": {
     "build": "tsup",
     "test": "c8 -r=lcov ava __tests__/*.spec.ts",
@@ -60,10 +63,13 @@
     "@types/babel__core": "^7.20.1",
     "@types/debug": "^4.1.8",
     "@types/node": "^20.5.0",
+    "@typescript-eslint/eslint-plugin": "^6.4.1",
+    "@typescript-eslint/parser": "^6.4.1",
     "ava": "^5.2.0",
     "c8": "^7.12.0",
     "eslint": "^8.23.1",
     "eslint-config-kagura": "^1.2.0",
+    "eslint-plugin-import": "npm:eslint-plugin-i@2.28.0-2",
     "playwright": "^1.35.1",
     "tsup": "^7.1.0",
     "typescript": "^4.8.3",
@@ -92,5 +98,6 @@
   "resolutions": {
     "function-bind": "npm:@nolyfill/function-bind@latest",
     "has": "npm:@nolyfill/has@latest"
-  }
+  },
+  "packageManager": "yarn@3.6.3"
 }

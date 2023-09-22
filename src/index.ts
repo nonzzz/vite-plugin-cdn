@@ -48,6 +48,8 @@ function cdn(opts: CDNPluginOptions = {}): Plugin[] {
         const [isSupport, version] = isSupportThreads()
         try {
           if (!isSupport) throw new Error(`vite-plugin-cdn2 can't work with nodejs ${version}.`)
+          const defaultWd = config.root
+          scanner.setDefaultWd(defaultWd)
           debug('start scanning')
           scanner.scanAllDependencies()
           debug('scanning done', scanner.dependencies)
@@ -97,8 +99,9 @@ function external(opts: ExternalPluginOptions = {}): Plugin {
           if (!module.global) throw new Error(`vite-plugin-external: missing global for module ${module.name}`)
         }
         debug('check done')
+        const defaultWd = process.cwd()
         const dependencies = await Promise.all(modules.map(async (module) => {
-          const exports = await getPackageExports(module)
+          const exports = await getPackageExports(module, defaultWd)
           return { bindings: exports, ...module }
         })) as ModuleInfo[]
         const deps = new Map(dependencies.map(dep => [dep.name, dep]))
