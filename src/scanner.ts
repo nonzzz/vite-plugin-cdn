@@ -79,7 +79,7 @@ function createWorkerThreads(scannerModule: ScannerModule, defaultWd: string) {
 }
 
 
-function serializationExportsFields(moduleName: string, aliases = []) {
+export function serializationExportsFields(moduleName: string, aliases = []) {
   return aliases.filter(v => v !== '.').map(v => path.posix.join(moduleName, v))
 }
 

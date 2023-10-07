@@ -17,7 +17,7 @@ export class CodeGen {
     this.aliasesToDependencies = new Map()
     this.dependencies.forEach(({ name, aliases }) => {
       this.aliasesToDependencies.set(name, name)
-      if (len(aliases)) {
+      if (Array.isArray(aliases) && len(aliases)) {
         aliases.forEach((aliase) => this.aliasesToDependencies.set(aliase, name))
       }
     })
@@ -316,7 +316,6 @@ export async function tryScanGlobalName(code: string) {
   const ast = await babelParse(code, { babelrc: false, configFile: false })
   const { body } = ast.program
   if (!len(body)) return
-  // It's enough to extract only the first node
   const node = body[0]
   // iife only return the first 
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
