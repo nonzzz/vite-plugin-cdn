@@ -29,6 +29,10 @@ export interface IModule extends TrackModule {
   resolve?: string | ResolverFunction
 }
 
+export type ExternalModule = Required<Module> & {
+  aliases?: Array<string>
+}
+
 export interface Serialization {
   url?: Set<string>
   type?: string
@@ -97,7 +101,7 @@ export type CDNPluginOptions = Pretty<{
 }>
 
 export type ExternalPluginOptions = Pretty<{
-  modules?: Array<Required<Module>>
+  modules?: Array<ExternalModule>
   include?: FilterPattern
   exclude?: FilterPattern
 }>

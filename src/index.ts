@@ -1,7 +1,7 @@
 import { createFilter } from '@rollup/pluginutils'
 import type { Plugin } from 'vite'
 import _debug from 'debug'
-import { createScanner, getPackageExports } from './scanner'
+import { createScanner, getPackageExports, serializationExportsFields } from './scanner'
 import { createInjectScript } from './inject'
 import {  createCodeGenerator } from './code-gen'
 import { isSupportThreads, transformCJSRequire  } from './shared'
@@ -102,7 +102,7 @@ function external(opts: ExternalPluginOptions = {}): Plugin {
         const defaultWd = process.cwd()
         const dependencies = await Promise.all(modules.map(async (module) => {
           const exports = await getPackageExports(module, defaultWd)
-          return { bindings: exports, ...module }
+          return { bindings: exports, ...module, aliases: serializationExportsFields(module.name, module.aliases) }
         })) as ModuleInfo[]
         const deps = new Map(dependencies.map(dep => [dep.name, dep]))
         debug('scanning done', deps)
@@ -131,4 +131,4 @@ export { cdn, external }
 
 export default cdn
 
-export type { InjectVisitor, TrackModule, CDNPluginOptions, ExternalPluginOptions } from './interface'
+export type { InjectVisitor, TrackModule, CDNPluginOptions, ExternalPluginOptions, ExternalModule } from './interface'
