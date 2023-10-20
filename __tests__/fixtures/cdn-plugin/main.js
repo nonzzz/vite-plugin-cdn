@@ -1,4 +1,3 @@
-/* eslint-disable */ 
 import { createApp, createVNode, defineComponent } from 'vue'
 
 const App = defineComponent({

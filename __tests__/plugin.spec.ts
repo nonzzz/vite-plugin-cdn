@@ -22,7 +22,7 @@ test('exteranl plugin', async (t) => {
 
   const { code } = bundle[0].output[0]
   const global = /Vue(.)\w+/g
-  const [s, s1] =  code.match(global)
+  const [s, s1] = code.match(global)
   t.is(s, 'Vue.defineComponent')
   t.is(s1, 'Vue.createVNode')
 })

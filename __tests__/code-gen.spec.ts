@@ -4,7 +4,6 @@ import { createCodeGenerator } from '../src/code-gen'
 import { createScanner } from '../dist/scanner'
 import type { ModuleInfo } from '../src/interface'
 
-
 test('filter', async (t) => {
   const code = `
      import { ref } from 'vue';
@@ -172,7 +171,6 @@ test('export with declaration', async (t) => {
   t.is(res.code, 'export const value = Vue.ref(0);')
 })
 
-
 test('export all module but the current module itself contains duplicated node', async (t) => {
   const code = 'export * from \'vue\';\nexport const version = \'self\';'
   const scanner = createScanner(['vue'])
@@ -192,5 +190,3 @@ test('import sub module', async (t) => {
   const res = await codeGen.transform(code)
   t.is(res.code, 'console.log(Vue.ref);')
 })
-
-

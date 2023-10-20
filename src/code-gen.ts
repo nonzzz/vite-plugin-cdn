@@ -1,9 +1,8 @@
 import { parse as esModuleLexer } from 'rs-module-lexer'
-import { parse as babelParse, types as t, transformFromAstAsync, traverse  } from '@babel/core'
+import { parse as babelParse, types as t, transformFromAstAsync, traverse } from '@babel/core'
 import type { NodePath } from '@babel/core'
 import { len } from './shared'
 import type { ModuleInfo } from './interface'
-
 
 function isTopLevelCalled(p: NodePath) {
   return t.isProgram(p.parent) || t.isExportDefaultDeclaration(p.parent) || t.isExportNamedDeclaration(p.parent)
@@ -306,7 +305,6 @@ export class CodeGen {
     }
   }
 }
-
 
 export function createCodeGenerator() {
   return new CodeGen() 

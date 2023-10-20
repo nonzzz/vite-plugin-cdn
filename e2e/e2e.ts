@@ -14,14 +14,13 @@ import type { Vite4Instance } from './vite4/interface'
 type ViteInstance = Vite2Instance | Vite3Instance | Vite4Instance
 
 export interface TestOptions {
-    vite: ViteInstance
-    pluginOption?: Parameters<typeof cdn>[number],
-    plugins: any[]
+  vite: ViteInstance
+  pluginOption?: Parameters<typeof cdn>[number],
+  plugins: any[]
 }
 
-
 type Server = http.Server & {
-    ip: string
+  ip: string
 }
 
 const defaultWd = __dirname
@@ -38,7 +37,7 @@ function prepareAssets(taskName: string, options: TestOptions) {
   })
 }
 
-function createGetter<T>(obj: T, key: string, getter: ()=> unknown) {
+function createGetter<T>(obj: T, key: string, getter: () => unknown) {
   Object.defineProperty(obj, key, {
     get: getter
   })
@@ -74,7 +73,6 @@ function createServer(taskName: string) {
         res.setHeader('Content-Type', contentType)
         res.statusCode = 200
         readStream.pipe(res)
-        return
       }
     } catch (error) {
       res.statusCode = 404

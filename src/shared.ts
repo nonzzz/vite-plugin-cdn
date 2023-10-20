@@ -5,7 +5,6 @@ import process from 'process'
 import AggregateError from '@nolyfill/es-aggregate-error'
 import type { CodeGen } from './code-gen'
 
-
 export function lookup(entry: string, target: string): string {
   const dir = path.dirname(entry)
   const targetFile = path.join(dir, target)
@@ -55,7 +54,7 @@ export const MAX_CONCURRENT = (() => {
 
 class Queue {
   maxConcurrent: number
-  queue: Array<()=> Promise<void>>
+  queue: Array<() => Promise<void>>
   running: number
   errors: Error[]
   constructor(maxConcurrent: number) {
@@ -65,7 +64,7 @@ class Queue {
     this.errors = []
   }
 
-  enqueue(task: ()=> Promise<void>) {
+  enqueue(task: () => Promise<void>) {
     this.queue.push(task)
     this.run()
   }

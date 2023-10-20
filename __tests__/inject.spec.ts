@@ -4,7 +4,7 @@ import { createInjectScript } from '../src/inject'
 import { jsdelivr } from '../src/url'
 import type { TrackModule } from '../src'
 
-interface MockIIFEMdoule extends TrackModule{
+interface MockIIFEMdoule extends TrackModule {
   relativeModule: string
   version: string
   bindings: Set<string>

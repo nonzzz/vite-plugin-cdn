@@ -3,8 +3,8 @@ import type { Plugin } from 'vite'
 import _debug from 'debug'
 import { createScanner, getPackageExports, serializationExportsFields } from './scanner'
 import { createInjectScript } from './inject'
-import {  createCodeGenerator } from './code-gen'
-import { isSupportThreads, transformCJSRequire  } from './shared'
+import { createCodeGenerator } from './code-gen'
+import { isSupportThreads, transformCJSRequire } from './shared'
 import { jsdelivr } from './url'
 import type { CodeGen } from './code-gen'
 import type { CDNPluginOptions, ExternalPluginOptions, ModuleInfo } from './interface'
@@ -12,10 +12,9 @@ import type { CDNPluginOptions, ExternalPluginOptions, ModuleInfo } from './inte
 const debug = _debug('vite-plugin-cdn2')
 
 interface ExternalPluginAPI {
-  filter: (id: unknown)=> boolean
+  filter: (id: unknown) => boolean
   generator: CodeGen
 }
-
 
 function transformPresetModule(api: ExternalPluginAPI): Plugin {
   // Inspired by vite-plugin-external

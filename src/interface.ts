@@ -5,7 +5,7 @@ export interface Module {
   global?: string
 }
 
-export interface TrackModule extends Module{
+export interface TrackModule extends Module {
   spare?: Array<string> | string
   relativeModule?: string
   aliases?: Array<string>
@@ -17,7 +17,7 @@ export interface IIFEModuleInfo extends TrackModule {
   jsdelivr?: string
 }
 
-export type ResolverFunction = (p: string, extra: IIFEModuleInfo)=> string
+export type ResolverFunction = (p: string, extra: IIFEModuleInfo) => string
 
 export interface ModuleInfo extends IIFEModuleInfo {
   bindings: Set<string>
@@ -40,7 +40,6 @@ export interface Serialization {
   tag: 'link' | 'script'
   extra: Record<string, any>
 }
-
 
 export type ScriptAttributes = Partial<
   Pick<
@@ -68,31 +67,31 @@ export type LinkAttrobites = Partial<
 >
 
 export type ScriptNode = ScriptAttributes &
-  Omit<Serialization, 'tag' | 'type'> & {
-    tag: 'script'
-  }
+Omit<Serialization, 'tag' | 'type'> & {
+  tag: 'script'
+}
 
 export type LinkNode = LinkAttrobites &
-  Omit<Serialization, 'tag' | 'type'> & {
-    tag: 'link'
-  }
+Omit<Serialization, 'tag' | 'type'> & {
+  tag: 'link'
+}
 
 export interface InjectVisitor {
-  script?: (node: ScriptNode)=> void
-  link?: (node: LinkNode)=> void
+  script?: (node: ScriptNode) => void
+  link?: (node: LinkNode) => void
 }
 
 type Pretty<T> = {
   [key in keyof T]:
-  T[key] extends (...args: any[])=> any
-  ? (...args: Parameters<T[key]>)=> ReturnType<T[key]>
-  : T[key] & NonNullable<unknown>
+  T[key] extends (...args: any[]) => any
+    ? (...args: Parameters<T[key]>) => ReturnType<T[key]>
+    : T[key] & NonNullable<unknown>
 } & NonNullable<unknown>
 
 export type CDNPluginOptions = Pretty<{
   modules?: Array<IModule | string>
   url?: string
-  transform?: ()=> InjectVisitor
+  transform?: () => InjectVisitor
   include?: FilterPattern
   exclude?: FilterPattern
   logLevel?: 'slient' | 'warn'

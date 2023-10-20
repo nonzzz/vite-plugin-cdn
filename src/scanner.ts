@@ -24,16 +24,15 @@ import type { IIFEModuleInfo, IModule, Module, ModuleInfo, ResolverFunction, Tra
 // import.meta.url will be transform as 
 // const __meta = { url: require('url').pathToFileURL(__filename).href }
 
-
 const _require = module.createRequire(import.meta.url)
 
 const ___filename = url.fileURLToPath(import.meta.url)
 
 interface WorkerData {
-    scannerModule: IModule[]
-    workerPort: MessagePort
-    internalThread: boolean
-    defaultWd: string
+  scannerModule: IModule[]
+  workerPort: MessagePort
+  internalThread: boolean
+  defaultWd: string
 }
 
 interface ScannerModule {
@@ -63,7 +62,7 @@ function createWorkerThreads(scannerModule: ScannerModule, defaultWd: string) {
     worker.postMessage({ sharedBuffer, id })
     const status = Atomics.wait(sharedBufferView, 0, 0)
     if (status !== 'ok' && status !== 'not-equal') throw new Error('Internal error: Atomics.wait() failed: ' + status)
-    const { message }: {message: ThreadMessage} = worker_threads.receiveMessageOnPort(mainPort)
+    const { message }: { message: ThreadMessage } = worker_threads.receiveMessageOnPort(mainPort)
     if (message.id !== id) throw new Error(`Internal error: Expected id ${id} but got id ${message.id}`)
     if (message.error) throw message.error
     const { bindings, failedModules } = message
@@ -77,7 +76,6 @@ function createWorkerThreads(scannerModule: ScannerModule, defaultWd: string) {
   }
   return runSync()
 }
-
 
 export function serializationExportsFields(moduleName: string, aliases = []) {
   return aliases.filter(v => v !== '.').map(v => path.posix.join(moduleName, v))
@@ -96,7 +94,7 @@ export async function getPackageExports(...argvs: [string | Module, string?]) {
     }
     case 2: {
       const [module, defaultWd] = argvs
-      if (typeof module !== 'object')  throw new Error('Invalid type')
+      if (typeof module !== 'object') throw new Error('Invalid type')
       const modulePath = _require.resolve(module.name, { paths: [defaultWd] })
       pkg = await _import(url.pathToFileURL(modulePath))
       break
@@ -124,14 +122,14 @@ async function tryResolveModule(
     const packageJsonPath = lookup(modulePath, 'package.json')
     const str = await fsp.readFile(packageJsonPath, 'utf8')
     const packageJSON: IIFEModuleInfo = JSON.parse(str)
-    const { version, name, unpkg, jsdelivr  } = packageJSON
+    const { version, name, unpkg, jsdelivr } = packageJSON
     const meta: ModuleInfo = Object.create(null)
     // Most of package has jsdelivr or unpkg field
     // but a small part is not. so we should accept user define.
     const iifeRelativePath = relativeModule || jsdelivr || unpkg 
     if (!iifeRelativePath) throw new Error('try resolve file failed.')
     if (rest.global) {
-      Object.assign(meta, { name, version, relativeModule: iifeRelativePath, aliases: serializationExportsFields(name,  aliases), ...rest })
+      Object.assign(meta, { name, version, relativeModule: iifeRelativePath, aliases: serializationExportsFields(name, aliases), ...rest })
     } else {
       const iifeFilePath = lookup(packageJsonPath, iifeRelativePath)
       const code = await fsp.readFile(iifeFilePath, 'utf8')
@@ -164,7 +162,7 @@ function startSyncThreads() {
       const { id, sharedBuffer } = msg
       const sharedBufferView = new Int32Array(sharedBuffer)
       try {
-        const bindings: Map<string, ModuleInfo>  = new Map()
+        const bindings: Map<string, ModuleInfo> = new Map()
         const queue = createConcurrentQueue(MAX_CONCURRENT)
         for (const module of scannerModule) {
           queue.enqueue(() => tryResolveModule(module, dependenciesMap, failedModules, defaultWd))
@@ -173,7 +171,7 @@ function startSyncThreads() {
         for (const module of scannerModule) {
           const { name } = module
           if (dependenciesMap.has(name)) {
-            const { code, ...rest } =  dependenciesMap.get(name)
+            const { code, ...rest } = dependenciesMap.get(name)
             if (!code) {
               bindings.set(name, rest)
               continue

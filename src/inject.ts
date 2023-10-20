@@ -65,7 +65,6 @@ class InjectScript {
     return tags
   }
 
-
   calledHook(transformHook?: CDNPluginOptions['transform']) {
     if (transformHook) {
       const hook = transformHook()
