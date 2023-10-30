@@ -500,26 +500,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@esbuild-kit/cjs-loader@npm:^2.4.2":
-  version: 2.4.2
-  resolution: "@esbuild-kit/cjs-loader@npm:2.4.2"
-  dependencies:
-    "@esbuild-kit/core-utils": ^3.0.0
-    get-tsconfig: ^4.4.0
-  checksum: e346e339bfc7eff5c52c270fd0ec06a7f2341b624adfb69f84b7d83f119c35070420906f2761a0b4604e0a0ec90e35eaf12544585476c428ed6d6ee3b250c0fe
-  languageName: node
-  linkType: hard
-
-"@esbuild-kit/core-utils@npm:^3.0.0":
-  version: 3.3.0
-  resolution: "@esbuild-kit/core-utils@npm:3.3.0"
-  dependencies:
-    esbuild: ~0.18.20
-    source-map-support: ^0.5.21
-  checksum: fc39137b8b68fa5b415bfa1096419ee7186bd2ef2fdca8fc2aa20959cec609a10e422201f6263f295c0746b4bd0ca1efceffe9c715a5a8b91a82c19d1b8e34c7
-  languageName: node
-  linkType: hard
-
 "@esbuild/android-arm64@npm:0.18.16":
   version: 0.18.16
   resolution: "@esbuild/android-arm64@npm:0.18.16"
@@ -3393,9 +3373,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"eslint-config-kagura@npm:^2.0.0":
-  version: 2.0.0
-  resolution: "eslint-config-kagura@npm:2.0.0"
+"eslint-config-kagura@npm:^2.0.1":
+  version: 2.0.1
+  resolution: "eslint-config-kagura@npm:2.0.1"
   dependencies:
     "@stylistic/eslint-plugin": ^0.0.12
     "@typescript-eslint/eslint-plugin": ^6.8.0
@@ -3408,7 +3388,7 @@ __metadata:
     globals: ^13.23.0
   peerDependencies:
     eslint: ">= 8.0.0"
-  checksum: b1188a11b6316eea62730cebfc6183b173e0e214c334d0250b6d6e9bc07741a1886dba9d44bd7b017c7183e9941f2454e650493018e7593bac6a2267627e9eb1
+  checksum: 7110cee319186d46ab94577e6f5b5d97a7145fbd6afd7965438575c10976563a62e393eff5bbbe0e49c03f4f6f47301b0e4ddba129da5e1a0765d0265c818c49
   languageName: node
   linkType: hard
 
@@ -3924,9 +3904,28 @@ __metadata:
   languageName: node
   linkType: hard
 
+"fsevents@npm:~2.3.3":
+  version: 2.3.3
+  resolution: "fsevents@npm:2.3.3"
+  dependencies:
+    node-gyp: latest
+  checksum: 11e6ea6fea15e42461fc55b4b0e4a0a3c654faa567f1877dbd353f39156f69def97a69936d1746619d656c4b93de2238bf731f6085a03a50cabf287c9d024317
+  conditions: os=darwin
+  languageName: node
+  linkType: hard
+
 "fsevents@patch:fsevents@~2.3.2#~builtin<compat/fsevents>":
   version: 2.3.2
   resolution: "fsevents@patch:fsevents@npm%3A2.3.2#~builtin<compat/fsevents>::version=2.3.2&hash=df0bf1"
+  dependencies:
+    node-gyp: latest
+  conditions: os=darwin
+  languageName: node
+  linkType: hard
+
+"fsevents@patch:fsevents@~2.3.3#~builtin<compat/fsevents>":
+  version: 2.3.3
+  resolution: "fsevents@patch:fsevents@npm%3A2.3.3#~builtin<compat/fsevents>::version=2.3.3&hash=df0bf1"
   dependencies:
     node-gyp: latest
   conditions: os=darwin
@@ -3970,21 +3969,21 @@ __metadata:
   languageName: node
   linkType: hard
 
-"get-tsconfig@npm:^4.4.0":
-  version: 4.7.0
-  resolution: "get-tsconfig@npm:4.7.0"
-  dependencies:
-    resolve-pkg-maps: ^1.0.0
-  checksum: 44536925720acc2f133d26301d5626405d8fe33066625484ff309bb6fb7f3310dc0bb202f862805f21a791e38a9870c6dddb013d1443dd5d745d91ad1946254a
-  languageName: node
-  linkType: hard
-
 "get-tsconfig@npm:^4.6.2":
   version: 4.7.1
   resolution: "get-tsconfig@npm:4.7.1"
   dependencies:
     resolve-pkg-maps: ^1.0.0
   checksum: 3a050cdc566eb87bf5a9ff9def591295d72ff6e67678136784525f7657923ee7c713b2f36b583064764392731c24a450f554bfa0a2687ec38db79633b2cd840c
+  languageName: node
+  linkType: hard
+
+"get-tsconfig@npm:^4.7.2":
+  version: 4.7.2
+  resolution: "get-tsconfig@npm:4.7.2"
+  dependencies:
+    resolve-pkg-maps: ^1.0.0
+  checksum: 172358903250eff0103943f816e8a4e51d29b8e5449058bdf7266714a908a48239f6884308bd3a6ff28b09f692b9533dbebfd183ab63e4e14f073cda91f1bca9
   languageName: node
   linkType: hard
 
@@ -6449,7 +6448,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tsup@npm:^7.1.0":
+"tsup@npm:7.1.0":
   version: 7.1.0
   resolution: "tsup@npm:7.1.0"
   dependencies:
@@ -6482,6 +6481,59 @@ __metadata:
     tsup: dist/cli-default.js
     tsup-node: dist/cli-node.js
   checksum: 5639c0f4990a89de6e55f9d77f53b8c3706e6d24700e37dd1fc696abda83017b02be7f514f4e7ce655b1e443b8f4d09ca0aca398b5767cad23466a18bd6e06b2
+  languageName: node
+  linkType: hard
+
+"tsup@patch:tsup@npm%3A7.1.0#./.yarn/patches/tsup-npm-7.1.0-3fe66cd74a.patch::locator=vite-plugin-cdn2%40workspace%3A.":
+  version: 7.1.0
+  resolution: "tsup@patch:tsup@npm%3A7.1.0#./.yarn/patches/tsup-npm-7.1.0-3fe66cd74a.patch::version=7.1.0&hash=6b36f1&locator=vite-plugin-cdn2%40workspace%3A."
+  dependencies:
+    bundle-require: ^4.0.0
+    cac: ^6.7.12
+    chokidar: ^3.5.1
+    debug: ^4.3.1
+    esbuild: ^0.18.2
+    execa: ^5.0.0
+    globby: ^11.0.3
+    joycon: ^3.0.1
+    postcss-load-config: ^4.0.1
+    resolve-from: ^5.0.0
+    rollup: ^3.2.5
+    source-map: 0.8.0-beta.0
+    sucrase: ^3.20.3
+    tree-kill: ^1.2.2
+  peerDependencies:
+    "@swc/core": ^1
+    postcss: ^8.4.12
+    typescript: ">=4.1.0"
+  peerDependenciesMeta:
+    "@swc/core":
+      optional: true
+    postcss:
+      optional: true
+    typescript:
+      optional: true
+  bin:
+    tsup: dist/cli-default.js
+    tsup-node: dist/cli-node.js
+  checksum: 62f506d32ae7d66f2c18f377e49442b05921b93324a2469b579d46fbbc1cb69128c50762cf0d32eb85103f63109880340bd1516252ab5001486e1f0e4a539901
+  languageName: node
+  linkType: hard
+
+"tsx@npm:^3.14.0":
+  version: 3.14.0
+  resolution: "tsx@npm:3.14.0"
+  dependencies:
+    esbuild: ~0.18.20
+    fsevents: ~2.3.3
+    get-tsconfig: ^4.7.2
+    source-map-support: ^0.5.21
+  dependenciesMeta:
+    fsevents:
+      optional: true
+  bin:
+    tsx: dist/cli.mjs
+  checksum: afcef5d9b90b5800cf1ffb749e943f63042d78a4c0d9eef6e13e43f4ecab465d45e2c9812a2c515cbdc2ee913ff1cd01bf5c606a48013dd3ce2214a631b45557
   languageName: node
   linkType: hard
 
@@ -6686,7 +6738,6 @@ __metadata:
   resolution: "vite-plugin-cdn2@workspace:."
   dependencies:
     "@babel/core": ^7.22.5
-    "@esbuild-kit/cjs-loader": ^2.4.2
     "@nolyfill/es-aggregate-error": ^1.0.20
     "@rollup/plugin-json": ^6.0.0
     "@rollup/pluginutils": ^5.0.2
@@ -6697,10 +6748,11 @@ __metadata:
     c8: ^7.12.0
     debug: ^4.3.4
     eslint: ^8.51.0
-    eslint-config-kagura: ^2.0.0
+    eslint-config-kagura: ^2.0.1
     playwright: ^1.35.1
     rs-module-lexer: ^1.0.0
     tsup: ^7.1.0
+    tsx: ^3.14.0
     typescript: ^4.8.3
     vite: ^3.1.3
     vue: ^3.3.4

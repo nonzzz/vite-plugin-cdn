@@ -8,24 +8,17 @@ import { tryScanGlobalName } from './code-gen'
 import { MAX_CONCURRENT, _import, createConcurrentQueue, is, len, lookup } from './shared'
 import type { IIFEModuleInfo, IModule, Module, ModuleInfo, ResolverFunction, TrackModule } from './interface'
 
-// This file is a simply dependencies scanner.
-// We won't throw any error unless it's an internal thread error(such as pid not equal)
-// we consume all expection modules in the plugin itself.
-// Notice. This file don't handle any logic with script inject.
-
 // TODO
-// We pack this file just to make the test pass. If we migrate to other test framework
+// https://github.com/nodejs/node/issues/43304
+// I'm not sure what's happened on Node Js. It can work well with javascript file. :(
+// If we upgrade CI and local development versions it can be solved.(Maybe)
 // Don't forget remove it.
 
-// https://github.com/evanw/esbuild/issues/859
-// however i can't want break currently export strategy. 
-// So we transform each import.meta.url and inejct banner for it.
-// But it just a temporary solution.
-// import.meta.url will be transform as 
-// const __meta = { url: require('url').pathToFileURL(__filename).href }
+// tsup provide shims for different platforms but the cjs shims full of noise.
+// https://github.com/egoist/tsup/blob/dev/assets/cjs_shims.js
+// We only need node shims.(Patch it)
 
 const _require = module.createRequire(import.meta.url)
-
 const ___filename = url.fileURLToPath(import.meta.url)
 
 interface WorkerData {

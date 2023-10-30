@@ -36,8 +36,7 @@ test('cdn plugin', async (t) => {
       write: false
     }
   })
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  //   @ts-ignored
+  // @ts-ignored
   const { output } = bundle
   const chunk = output[0]
   const html = output[1]
