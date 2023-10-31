@@ -4,7 +4,7 @@ import module from 'module'
 import path from 'path'
 import worker_threads from 'worker_threads'
 import type { MessagePort } from 'worker_threads'
-import { tryScanGlobalName } from './code-gen'
+import { tryScanGlobalName } from './transform'
 import { MAX_CONCURRENT, _import, createConcurrentQueue, is, len, lookup } from './shared'
 import type { IIFEModuleInfo, IModule, Module, ModuleInfo, ResolverFunction, TrackModule } from './interface'
 

@@ -1284,6 +1284,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/react@npm:^18.2.36":
+  version: 18.2.36
+  resolution: "@types/react@npm:18.2.36"
+  dependencies:
+    "@types/prop-types": "*"
+    "@types/scheduler": "*"
+    csstype: ^3.0.2
+  checksum: 561fab294117983f3d245a63730bcffb423fc2a1b0f27d20c870abc5d980bc206a74f741cb11b5170fcdf0e747ac05448369cd930fbf345f74ed567f8fef3a9e
+  languageName: node
+  linkType: hard
+
 "@types/scheduler@npm:*":
   version: 0.16.3
   resolution: "@types/scheduler@npm:0.16.3"
@@ -2040,12 +2051,6 @@ __metadata:
   checksum: a94047e702b57c91680e6a952ec4a1aaa2cfd0d80ead76bc8c954202980d8c51968a6ea18b4d8010e8e2cf95676533d8022a8ebba9abc1dfe25686721df26fd2
   languageName: node
   linkType: hard
-
-"babel-plugin@workspace:internal/babel":
-  version: 0.0.0-use.local
-  resolution: "babel-plugin@workspace:internal/babel"
-  languageName: unknown
-  linkType: soft
 
 "balanced-match@npm:^1.0.0":
   version: 1.0.2
@@ -6750,12 +6755,14 @@ __metadata:
     "@types/babel__core": ^7.20.1
     "@types/debug": ^4.1.8
     "@types/node": ^20.5.0
+    "@types/react": ^18.2.36
     ava: ^5.2.0
     c8: ^7.12.0
     debug: ^4.3.4
     eslint: ^8.51.0
     eslint-config-kagura: ^2.0.1
     playwright: ^1.35.1
+    react: ^18.2.0
     rs-module-lexer: ^2.0.1
     tsup: ^7.1.0
     tsx: ^3.14.0

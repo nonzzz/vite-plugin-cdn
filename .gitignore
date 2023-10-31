@@ -9,4 +9,4 @@ example/**/.yarn/
 
 coverage
 
-internal/target
+crates/target

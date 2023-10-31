@@ -31,7 +31,7 @@ function createDependency() {
     get dependencyWithAlias() {
       const traverse = (aliases: string[], name: string) => aliases.reduce((acc, cur) => ({ ...acc, [cur]: name }), {})
       return Object.values(this.dependency).reduce((acc, cur) => {
-        if (cur.aliases) return traverse(cur.aliases, cur.name)
+        if (cur.aliases) acc = { ...acc, ...traverse(cur.aliases, cur.name) }
         return { ...acc, [cur.name]: cur.name }
       }, {})
     },
@@ -49,6 +49,7 @@ interface ExternalPluginAPI {
 function transformPresetModule(api: ExternalPluginAPI): Plugin {
   // Inspired by vite-plugin-external
   const nodeModules = 'node_modules'
+  const { dependency } = api
   return {
     name: 'vite-plugin-cdn2:presetModule',
     transform(code, id) {
@@ -57,7 +58,9 @@ function transformPresetModule(api: ExternalPluginAPI): Plugin {
       // coomonjs
       code = transformCJSRequire(code, api.dependency.dependency)
       // esm
-      if (api.dependency.filter(code, id)) return transformWithBabel(code, {})
+      if (dependency.filter(code, id)) {
+        return transformWithBabel(code, dependency) 
+      }
       return { code }
     }
   }
@@ -141,7 +144,7 @@ function external(opts: ExternalPluginOptions = {}): Plugin {
     },
     transform(code, id) {
       if (!filter(id) && !dependency.filter(code, id)) return
-      return transformWithBabel(code, {})
+      return transformWithBabel(code, dependency)
     },
     api: {
       filter,
