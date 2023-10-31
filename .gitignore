@@ -8,3 +8,5 @@ test/__fake_*
 example/**/.yarn/
 
 coverage
+
+internal/target

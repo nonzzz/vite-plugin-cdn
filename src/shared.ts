@@ -3,7 +3,7 @@ import fs from 'fs'
 import os from 'os'
 import process from 'process'
 import AggregateError from '@nolyfill/es-aggregate-error'
-import type { CodeGen } from './code-gen'
+import { ModuleInfo } from './interface'
 
 export function lookup(entry: string, target: string): string {
   const dir = path.dirname(entry)
@@ -38,11 +38,11 @@ export function is(condit: boolean, message: string) {
 // If we find the correct dynamic import handing it should be removed.
 export const _import = new Function('specifier', 'return import(specifier)')
 
-export function transformCJSRequire(code: string, extenrals: CodeGen['dependencies']) {
-  extenrals.forEach((meta, externalModule) => {
+export function transformCJSRequire(code: string, extenrals: Record<string, ModuleInfo>) {
+  for (const externalModule in extenrals) {
     const reg = new RegExp(`require\\((["'\`])\\s*${externalModule}\\s*(\\1)\\)`, 'g')
-    code = code.replace(reg, meta.global)
-  })
+    code = code.replace(reg, extenrals[externalModule].global)
+  }
   return code
 }
 

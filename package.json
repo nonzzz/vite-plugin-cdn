@@ -78,7 +78,7 @@
     "@babel/core": "^7.22.5",
     "@rollup/pluginutils": "^5.0.2",
     "debug": "^4.3.4",
-    "rs-module-lexer": "^1.0.0"
+    "rs-module-lexer": "^2.0.1"
   },
   "ava": {
     "files": [

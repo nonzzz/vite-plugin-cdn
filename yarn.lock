@@ -1624,65 +1624,65 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@xn-sakina/rml-darwin-arm64@npm:1.0.0":
-  version: 1.0.0
-  resolution: "@xn-sakina/rml-darwin-arm64@npm:1.0.0"
+"@xn-sakina/rml-darwin-arm64@npm:2.0.1":
+  version: 2.0.1
+  resolution: "@xn-sakina/rml-darwin-arm64@npm:2.0.1"
   conditions: os=darwin & cpu=arm64
   languageName: node
   linkType: hard
 
-"@xn-sakina/rml-darwin-x64@npm:1.0.0":
-  version: 1.0.0
-  resolution: "@xn-sakina/rml-darwin-x64@npm:1.0.0"
+"@xn-sakina/rml-darwin-x64@npm:2.0.1":
+  version: 2.0.1
+  resolution: "@xn-sakina/rml-darwin-x64@npm:2.0.1"
   conditions: os=darwin & cpu=x64
   languageName: node
   linkType: hard
 
-"@xn-sakina/rml-linux-arm-gnueabihf@npm:1.0.0":
-  version: 1.0.0
-  resolution: "@xn-sakina/rml-linux-arm-gnueabihf@npm:1.0.0"
+"@xn-sakina/rml-linux-arm-gnueabihf@npm:2.0.1":
+  version: 2.0.1
+  resolution: "@xn-sakina/rml-linux-arm-gnueabihf@npm:2.0.1"
   conditions: os=linux & cpu=arm
   languageName: node
   linkType: hard
 
-"@xn-sakina/rml-linux-arm64-gnu@npm:1.0.0":
-  version: 1.0.0
-  resolution: "@xn-sakina/rml-linux-arm64-gnu@npm:1.0.0"
+"@xn-sakina/rml-linux-arm64-gnu@npm:2.0.1":
+  version: 2.0.1
+  resolution: "@xn-sakina/rml-linux-arm64-gnu@npm:2.0.1"
   conditions: os=linux & cpu=arm64
   languageName: node
   linkType: hard
 
-"@xn-sakina/rml-linux-arm64-musl@npm:1.0.0":
-  version: 1.0.0
-  resolution: "@xn-sakina/rml-linux-arm64-musl@npm:1.0.0"
+"@xn-sakina/rml-linux-arm64-musl@npm:2.0.1":
+  version: 2.0.1
+  resolution: "@xn-sakina/rml-linux-arm64-musl@npm:2.0.1"
   conditions: os=linux & cpu=arm64
   languageName: node
   linkType: hard
 
-"@xn-sakina/rml-linux-x64-gnu@npm:1.0.0":
-  version: 1.0.0
-  resolution: "@xn-sakina/rml-linux-x64-gnu@npm:1.0.0"
+"@xn-sakina/rml-linux-x64-gnu@npm:2.0.1":
+  version: 2.0.1
+  resolution: "@xn-sakina/rml-linux-x64-gnu@npm:2.0.1"
   conditions: os=linux & cpu=x64
   languageName: node
   linkType: hard
 
-"@xn-sakina/rml-linux-x64-musl@npm:1.0.0":
-  version: 1.0.0
-  resolution: "@xn-sakina/rml-linux-x64-musl@npm:1.0.0"
+"@xn-sakina/rml-linux-x64-musl@npm:2.0.1":
+  version: 2.0.1
+  resolution: "@xn-sakina/rml-linux-x64-musl@npm:2.0.1"
   conditions: os=linux & cpu=x64
   languageName: node
   linkType: hard
 
-"@xn-sakina/rml-win32-arm64-msvc@npm:1.0.0":
-  version: 1.0.0
-  resolution: "@xn-sakina/rml-win32-arm64-msvc@npm:1.0.0"
+"@xn-sakina/rml-win32-arm64-msvc@npm:2.0.1":
+  version: 2.0.1
+  resolution: "@xn-sakina/rml-win32-arm64-msvc@npm:2.0.1"
   conditions: os=win32 & cpu=arm64
   languageName: node
   linkType: hard
 
-"@xn-sakina/rml-win32-x64-msvc@npm:1.0.0":
-  version: 1.0.0
-  resolution: "@xn-sakina/rml-win32-x64-msvc@npm:1.0.0"
+"@xn-sakina/rml-win32-x64-msvc@npm:2.0.1":
+  version: 2.0.1
+  resolution: "@xn-sakina/rml-win32-x64-msvc@npm:2.0.1"
   conditions: os=win32 & cpu=x64
   languageName: node
   linkType: hard
@@ -2040,6 +2040,12 @@ __metadata:
   checksum: a94047e702b57c91680e6a952ec4a1aaa2cfd0d80ead76bc8c954202980d8c51968a6ea18b4d8010e8e2cf95676533d8022a8ebba9abc1dfe25686721df26fd2
   languageName: node
   linkType: hard
+
+"babel-plugin@workspace:internal/babel":
+  version: 0.0.0-use.local
+  resolution: "babel-plugin@workspace:internal/babel"
+  languageName: unknown
+  linkType: soft
 
 "balanced-match@npm:^1.0.0":
   version: 1.0.2
@@ -5902,19 +5908,19 @@ __metadata:
   languageName: node
   linkType: hard
 
-"rs-module-lexer@npm:^1.0.0":
-  version: 1.0.0
-  resolution: "rs-module-lexer@npm:1.0.0"
+"rs-module-lexer@npm:^2.0.1":
+  version: 2.0.1
+  resolution: "rs-module-lexer@npm:2.0.1"
   dependencies:
-    "@xn-sakina/rml-darwin-arm64": 1.0.0
-    "@xn-sakina/rml-darwin-x64": 1.0.0
-    "@xn-sakina/rml-linux-arm-gnueabihf": 1.0.0
-    "@xn-sakina/rml-linux-arm64-gnu": 1.0.0
-    "@xn-sakina/rml-linux-arm64-musl": 1.0.0
-    "@xn-sakina/rml-linux-x64-gnu": 1.0.0
-    "@xn-sakina/rml-linux-x64-musl": 1.0.0
-    "@xn-sakina/rml-win32-arm64-msvc": 1.0.0
-    "@xn-sakina/rml-win32-x64-msvc": 1.0.0
+    "@xn-sakina/rml-darwin-arm64": 2.0.1
+    "@xn-sakina/rml-darwin-x64": 2.0.1
+    "@xn-sakina/rml-linux-arm-gnueabihf": 2.0.1
+    "@xn-sakina/rml-linux-arm64-gnu": 2.0.1
+    "@xn-sakina/rml-linux-arm64-musl": 2.0.1
+    "@xn-sakina/rml-linux-x64-gnu": 2.0.1
+    "@xn-sakina/rml-linux-x64-musl": 2.0.1
+    "@xn-sakina/rml-win32-arm64-msvc": 2.0.1
+    "@xn-sakina/rml-win32-x64-msvc": 2.0.1
   dependenciesMeta:
     "@xn-sakina/rml-darwin-arm64":
       optional: true
@@ -5934,7 +5940,7 @@ __metadata:
       optional: true
     "@xn-sakina/rml-win32-x64-msvc":
       optional: true
-  checksum: fbf3efa4832ea20427a34b65d632251f695f4314124acbba2967d6d188fe7a8a2e79f58da98b25dae22c367a6927c486a3310e8206cea31e09abdf123c47409b
+  checksum: 68c6ec4b8d25c1730dc15954cbfcb19120427503e62ad267f023bb23337587135c4786d1c290e2ea54aefe2b2e4a725b811191535eca1592bff39f9326602d4d
   languageName: node
   linkType: hard
 
@@ -6750,7 +6756,7 @@ __metadata:
     eslint: ^8.51.0
     eslint-config-kagura: ^2.0.1
     playwright: ^1.35.1
-    rs-module-lexer: ^1.0.0
+    rs-module-lexer: ^2.0.1
     tsup: ^7.1.0
     tsx: ^3.14.0
     typescript: ^4.8.3

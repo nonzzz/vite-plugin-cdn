@@ -1,19 +1,49 @@
 import { createFilter } from '@rollup/pluginutils'
 import type { Plugin } from 'vite'
+import { parse as esModuleLexer } from 'rs-module-lexer'
 import _debug from 'debug'
 import { createScanner, getPackageExports, serializationExportsFields } from './scanner'
 import { createInjectScript } from './inject'
-import { createCodeGenerator } from './code-gen'
-import { isSupportThreads, transformCJSRequire } from './shared'
+import { isSupportThreads, len, transformCJSRequire } from './shared'
 import { jsdelivr } from './url'
-import type { CodeGen } from './code-gen'
 import type { CDNPluginOptions, ExternalPluginOptions, ModuleInfo } from './interface'
+import { transformWithBabel } from './transform'
 
 const debug = _debug('vite-plugin-cdn2')
 
+function createDependency() {
+  const dependency: Record<string, ModuleInfo> = {}
+
+  const filter = (code: string, id: string, dependencyWithAlias: Record<string, string>) => {
+    const { output } = esModuleLexer({ input: [{ filename: id, code }] })
+    if (!len(output)) return false
+    const { imports } = output[0]
+    const modules = Array.from(new Set([...imports.map(i => i.n)]))
+    for (const m of modules) {
+      if (dependencyWithAlias[m]) return true
+      continue
+    }
+    return false
+  }
+
+  return {
+    dependency,
+    get dependencyWithAlias() {
+      const traverse = (aliases: string[], name: string) => aliases.reduce((acc, cur) => ({ ...acc, [cur]: name }), {})
+      return Object.values(this.dependency).reduce((acc, cur) => {
+        if (cur.aliases) return traverse(cur.aliases, cur.name)
+        return { ...acc, [cur.name]: cur.name }
+      }, {})
+    },
+    filter: function (code: string, id: string) {
+      return filter(code, id, this.dependencyWithAlias)
+    }
+  }
+}
+
 interface ExternalPluginAPI {
   filter: (id: unknown) => boolean
-  generator: CodeGen
+  dependency: ReturnType<typeof createDependency>
 }
 
 function transformPresetModule(api: ExternalPluginAPI): Plugin {
@@ -25,9 +55,9 @@ function transformPresetModule(api: ExternalPluginAPI): Plugin {
       if (!api.filter(id)) return
       if (!id.includes(nodeModules)) return
       // coomonjs
-      code = transformCJSRequire(code, api.generator.dependencies)
+      code = transformCJSRequire(code, api.dependency.dependency)
       // esm
-      if (api.generator.filter(code, id)) return api.generator.transform(code)
+      if (api.dependency.filter(code, id)) return transformWithBabel(code, {})
       return { code }
     }
   }
@@ -52,7 +82,7 @@ function cdn(opts: CDNPluginOptions = {}): Plugin[] {
           debug('start scanning')
           scanner.scanAllDependencies()
           debug('scanning done', scanner.dependencies)
-          api.generator.injectDependencies(scanner.dependencies)
+          api.dependency.dependency = Object.fromEntries(scanner.dependencies)
           if (logLevel === 'warn') {
             scanner.failedModules.forEach((errorMessage, name) => config.logger.error(`vite-plugin-cdn2: ${name} ${errorMessage ? errorMessage : 'resolved failed.Please check it.'}`))
           }
@@ -87,7 +117,7 @@ function external(opts: ExternalPluginOptions = {}): Plugin {
   const debug = _debug('vite-plugin-external')
   const { modules = [], include, exclude } = opts
   const filter = createFilter(include, exclude)
-  const generator = createCodeGenerator()
+  const dependency = createDependency()
 
   return {
     name: 'vite-plugin-external',
@@ -103,21 +133,19 @@ function external(opts: ExternalPluginOptions = {}): Plugin {
           const exports = await getPackageExports(module, defaultWd)
           return { bindings: exports, ...module, aliases: serializationExportsFields(module.name, module.aliases) }
         })) as ModuleInfo[]
-        const deps = new Map(dependencies.map(dep => [dep.name, dep]))
-        debug('scanning done', deps)
-        generator.injectDependencies(deps)
+        dependency.dependency = dependencies.reduce((deps, dep) => ({ ...deps, [dep.name]: dep }), {})
+        debug('scanning done', dependency.dependency)
       } catch (error) {
         this.error(error)
       }
     },
-    async transform(code, id) {
-      if (!filter(id)) return
-      if (!generator.filter(code, id)) return
-      return generator.transform(code)
+    transform(code, id) {
+      if (!filter(id) && !dependency.filter(code, id)) return
+      return transformWithBabel(code, {})
     },
     api: {
       filter,
-      generator
+      dependency
     }
   }
 }
