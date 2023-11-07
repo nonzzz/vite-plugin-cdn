@@ -45,7 +45,6 @@ class InjectScript {
   toTags() {
     const tags: Array<HtmlTagDescriptor> = []
     this.modules.forEach((node) => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { tag, url, name: _, extra: __, ...restProps } = node
       if (url.size) {
         url.forEach((l) => {
