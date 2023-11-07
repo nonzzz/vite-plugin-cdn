@@ -1,3 +1,11 @@
+## 0.14.0
+
+### Features
+
+- Upgrade `rs-module-lexer`
+- `ExportDefaultDeclaration` should be process.
+- `external` plugin support aliases.
+
 ## 0.13.0
 
 ### Features
