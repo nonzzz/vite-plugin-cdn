@@ -244,7 +244,8 @@ function externalGlobals(options: TransformWithBabelOptions): PluginTarget {
         Declaration: (path) => {
           if (!isTopLevelCalled(path)) return
           if (t.isClassDeclaration(path.node) || t.isFunctionDeclaration(path.node)) {
-            const def = path.node.id.name
+            const def = path.node.id?.name
+            if (!def) return 
             if (declarations.has(def)) {
               const p = declarations.get(def)
               p.remove()
@@ -297,8 +298,8 @@ export async function tryScanGlobalName(code: string) {
     const identifier = node.declarations[0].id
     if (t.isIdentifier(identifier)) return identifier.name
   }
-  const bucket = new Set<string>()
   let globalName = ''
+  let regName = ''
   // umd
   // @ts-ignore
   traverse(ast, {
@@ -306,30 +307,19 @@ export async function tryScanGlobalName(code: string) {
       if (t.isCallExpression(path.node.expression)) {
         if (t.isFunctionExpression(path.node.expression.callee)) {
           const params = path.node.expression.callee.params
-          if (len(params)) {
-            params.forEach((i) => {
-              if (i.type === 'Identifier') {
-                bucket.add(i.name)
-              }
-            })
-          }
+          if (len(params) && params[0].type === 'Identifier' && !regName) regName = params[0].name
         }
       }
     },
     AssignmentExpression: (path) => {
+      if (globalName) return path.skip()
       const op = path.get('left')
-      if (
-        op.node.type === 'MemberExpression' &&
-        (path.parent.type === 'CallExpression' || path.parent.type === 'ConditionalExpression' || path.parent.type === 'ExpressionStatement')
-      ) {
-        if (!globalName) {
-          if (t.isIdentifier(op.node.object) && !bucket.has(op.node.object.name)) return
-          if (!t.isIdentifier(op.node.property)) return
-          if (op.node.property.name === 'exports') return
-          globalName = op.node.property.name
+      if (op.node.type === 'MemberExpression') {
+        const { start, end } = op.node.object
+        if (new RegExp(regName || 'global', 'i').test(code.slice(start, end)) && t.isIdentifier(op.node.property)) {
+          if (!globalName) globalName = op.node.property.name
         }
       }
-      path.skip()
     }
   })
   return globalName

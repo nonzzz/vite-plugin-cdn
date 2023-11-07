@@ -1,3 +1,10 @@
+## 0.14.1
+
+### Patches
+
+- Fix `tryScanGlobalName` can't work with some libs.
+- Fix `transformWithBabel` can't anonymous function.
+
 ## 0.14.0
 
 ### Features
