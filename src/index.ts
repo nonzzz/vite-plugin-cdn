@@ -165,7 +165,8 @@ function external(opts: ExternalPluginOptions = {}): Plugin {
       }
     },
     transform(code, id) {
-      if (!filter(id) && !dependency.filter(code, id)) return
+      if (!filter(id)) return
+      if (!dependency.filter(code, id)) return
       return transformWithBabel(code, dependency)
     },
     api: {

@@ -1,3 +1,10 @@
+## 0.15.1
+
+### Patches
+
+- Fix error condit.
+- Remove log.
+
 ## 0.15.0
 
 ### Features
