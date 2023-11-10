@@ -1,3 +1,9 @@
+## 0.15.0
+
+### Features
+
+- Add `rs-module-lexer` wasm bindings.
+
 ## 0.14.1
 
 ### Patches

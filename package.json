@@ -1,6 +1,6 @@
 {
   "name": "vite-plugin-cdn2",
-  "version": "0.14.1",
+  "version": "0.15.0",
   "description": "A Vite plugin that allowed you replace module with CDN",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -79,8 +79,9 @@
   "dependencies": {
     "@babel/core": "^7.22.5",
     "@rollup/pluginutils": "^5.0.2",
+    "@xn-sakina/rml-wasm": "^2.1.1",
     "debug": "^4.3.4",
-    "rs-module-lexer": "^2.0.1"
+    "rs-module-lexer": "^2.1.1"
   },
   "ava": {
     "files": [

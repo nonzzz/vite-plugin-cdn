@@ -1,6 +1,5 @@
 import { createFilter } from '@rollup/pluginutils'
 import type { Plugin } from 'vite'
-import { parse as esModuleLexer } from 'rs-module-lexer'
 import _debug from 'debug'
 import { createScanner, getPackageExports, serializationExportsFields } from './scanner'
 import { createInjectScript } from './inject'
@@ -11,11 +10,28 @@ import { transformWithBabel } from './transform'
 
 const debug = _debug('vite-plugin-cdn2')
 
+// rs-module-lexer can't cover all platforms.
+// But it provide a wasm bindings. So we provide
+// a wrapper func to cover most of scence.
+// WASM support at least node15
+
+async function createRsModuleLexer() {
+  try {
+    const { parse } = (await import('rs-module-lexer')).default
+    return parse
+  } catch (error) {
+    const { parse } = await import('@xn-sakina/rml-wasm').catch(() => {
+      throw new Error('rs-module-lexer can\'t work on you current machine.')
+    })
+    return parse
+  }
+}
+
 function createDependency() {
   const dependency: Record<string, ModuleInfo> = {}
 
-  const filter = (code: string, id: string, dependencyWithAlias: Record<string, string>) => {
-    const { output } = esModuleLexer({ input: [{ filename: id, code }] })
+  const filter = (code: string, id: string, dependencyWithAlias: Record<string, string>, lex: Awaited<ReturnType<typeof createRsModuleLexer>>) => {
+    const { output } = lex({ input: [{ filename: id, code }] })
     if (!len(output)) return false
     const { imports } = output[0]
     const modules = Array.from(new Set([...imports.map(i => i.n)]))
@@ -28,6 +44,7 @@ function createDependency() {
 
   return {
     dependency,
+    lex: null,
     get dependencyWithAlias() {
       const traverse = (aliases: string[], name: string) => aliases.reduce((acc, cur) => ({ ...acc, [cur]: name }), {})
       return Object.values(this.dependency).reduce((acc, cur) => {
@@ -36,7 +53,7 @@ function createDependency() {
       }, {})
     },
     filter: function (code: string, id: string) {
-      return filter(code, id, this.dependencyWithAlias)
+      return filter(code, id, this.dependencyWithAlias, this.lex)
     }
   }
 }
@@ -80,6 +97,9 @@ function cdn(opts: CDNPluginOptions = {}): Plugin[] {
         const [isSupport, version] = isSupportThreads()
         try {
           if (!isSupport) throw new Error(`vite-plugin-cdn2 can't work with nodejs ${version}.`)
+          const esModuleLexer = await createRsModuleLexer()
+          api.dependency.lex = esModuleLexer
+          console.log(api.dependency, esModuleLexer)
           const defaultWd = config.root
           scanner.setDefaultWd(defaultWd)
           debug('start scanning')
@@ -126,6 +146,8 @@ function external(opts: ExternalPluginOptions = {}): Plugin {
     name: 'vite-plugin-external',
     async buildStart() {
       try {
+        const esModuleLexer = await createRsModuleLexer()
+        dependency.lex = esModuleLexer
         debug('start check modules')
         for (const module of modules) {
           if (!module.global) throw new Error(`vite-plugin-external: missing global for module ${module.name}`)
