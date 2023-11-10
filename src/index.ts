@@ -99,7 +99,6 @@ function cdn(opts: CDNPluginOptions = {}): Plugin[] {
           if (!isSupport) throw new Error(`vite-plugin-cdn2 can't work with nodejs ${version}.`)
           const esModuleLexer = await createRsModuleLexer()
           api.dependency.lex = esModuleLexer
-          console.log(api.dependency, esModuleLexer)
           const defaultWd = config.root
           scanner.setDefaultWd(defaultWd)
           debug('start scanning')
