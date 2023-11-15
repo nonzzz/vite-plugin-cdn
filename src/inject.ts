@@ -54,9 +54,12 @@ class InjectScript {
             attrs: {}
           }
           descriptor.attrs[tag === 'script' ? 'src' : 'href'] = l
+          // force apply stylesheet for link
+          if (descriptor.tag === 'link') descriptor.attrs.rel = 'stylesheet'
           for (const prop in restProps) {
             descriptor.attrs[prop] = restProps[prop]
           }
+        
           tags.push(descriptor)
         })
       }

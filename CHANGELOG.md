@@ -1,3 +1,9 @@
+## 0.15.2
+
+### Patches
+
+- Fix tag generator.
+
 ## 0.15.1
 
 ### Patches
