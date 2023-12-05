@@ -2,6 +2,7 @@ import path from 'path'
 import fs from 'fs'
 import os from 'os'
 import process from 'process'
+import MagicString from 'magic-string'
 import AggregateError from '@nolyfill/es-aggregate-error'
 import { ModuleInfo } from './interface'
 
@@ -39,11 +40,12 @@ export function is(condit: boolean, message: string) {
 export const _import = new Function('specifier', 'return import(specifier)')
 
 export function transformCJSRequire(code: string, extenrals: Record<string, ModuleInfo>) {
+  const s = new MagicString(code)
   for (const externalModule in extenrals) {
     const reg = new RegExp(`require\\((["'\`])\\s*${externalModule}\\s*(\\1)\\)`, 'g')
-    code = code.replace(reg, extenrals[externalModule].global)
+    s.replace(reg, extenrals[externalModule].global)
   }
-  return code
+  return { code: s.toString(), map: s.generateMap() }
 }
 
 export const MAX_CONCURRENT = (() => {

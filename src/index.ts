@@ -73,12 +73,12 @@ function transformPresetModule(api: ExternalPluginAPI): Plugin {
       if (!api.filter(id)) return
       if (!id.includes(nodeModules)) return
       // coomonjs
-      code = transformCJSRequire(code, api.dependency.dependency)
+      const result = transformCJSRequire(code, dependency.dependency)
       // esm
       if (dependency.filter(code, id)) {
         return transformWithBabel(code, dependency) 
       }
-      return { code }
+      return result
     }
   }
 } 

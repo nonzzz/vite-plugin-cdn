@@ -81,6 +81,7 @@
     "@rollup/pluginutils": "^5.0.2",
     "@xn-sakina/rml-wasm": "^2.1.1",
     "debug": "^4.3.4",
+    "magic-string": "^0.30.5",
     "rs-module-lexer": "^2.1.1"
   },
   "ava": {

@@ -4787,6 +4787,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"magic-string@npm:^0.30.5":
+  version: 0.30.5
+  resolution: "magic-string@npm:0.30.5"
+  dependencies:
+    "@jridgewell/sourcemap-codec": ^1.4.15
+  checksum: da10fecff0c0a7d3faf756913ce62bd6d5e7b0402be48c3b27bfd651b90e29677e279069a63b764bcdc1b8ecdcdb898f29a5c5ec510f2323e8d62ee057a6eb18
+  languageName: node
+  linkType: hard
+
 "make-dir@npm:^3.0.0":
   version: 3.1.0
   resolution: "make-dir@npm:3.1.0"
@@ -6769,6 +6778,7 @@ __metadata:
     debug: ^4.3.4
     eslint: ^8.51.0
     eslint-config-kagura: ^2.0.1
+    magic-string: ^0.30.5
     playwright: ^1.35.1
     react: ^18.2.0
     rs-module-lexer: ^2.1.1
