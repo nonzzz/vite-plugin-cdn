@@ -159,11 +159,10 @@ function external(opts: ExternalPluginOptions = {}): Plugin {
     transform(code, id) {
       if (!filter(id)) return
       if (id.includes(nodeModules)) {
-        // coomonjs
         const result = transformCJSRequire(code, dependency.dependency)
+        if (dependency.filter(code, id)) return transformWithBabel(code, dependency) 
         return result
       }
-      // esm
       if (dependency.filter(code, id)) return transformWithBabel(code, dependency) 
     },
     api: {
