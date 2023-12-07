@@ -63,30 +63,17 @@ interface ExternalPluginAPI {
   dependency: ReturnType<typeof createDependency>
 }
 
-function transformPresetModule(api: ExternalPluginAPI): Plugin {
-  // Inspired by vite-plugin-external
-  const nodeModules = 'node_modules'
-  const { dependency } = api
+function transformPresetModule(transform: Plugin['transform']): Plugin {
   return {
     name: 'vite-plugin-cdn2:presetModule',
-    transform(code, id) {
-      if (!api.filter(id)) return
-      if (!id.includes(nodeModules)) return
-      // coomonjs
-      const result = transformCJSRequire(code, dependency.dependency)
-      // esm
-      if (dependency.filter(code, id)) {
-        return transformWithBabel(code, dependency) 
-      }
-      return result
-    }
+    transform
   }
 } 
 
 function cdn(opts: CDNPluginOptions = {}): Plugin[] {
   const { modules = [], url = jsdelivr, include = /\.(mjs|js|ts|vue|jsx|tsx)(\?.*|)$/, exclude, logLevel = 'warn', resolve: resolver, apply = 'build' } = opts
   const scanner = createScanner(modules)
-  const { transform, api: _api } = external({ modules: [], include, exclude })
+  const { api: _api, transform } = external({ modules: [], include, exclude })
   const api = _api as ExternalPluginAPI
   const transformPlugin = (): Plugin => {
     return {
@@ -121,7 +108,11 @@ function cdn(opts: CDNPluginOptions = {}): Plugin[] {
           config.logger.error(error)
         }
       },
-      transform,
+      transform(code, id) {
+        if (!api.filter(id)) return
+        if (!api.dependency.filter(code, id)) return
+        return transformWithBabel(code, api.dependency)
+      },
       transformIndexHtml(html) {
         const inject = createInjectScript(scanner.dependencies, url, resolver)
         inject.calledHook(opts.transform)
@@ -132,10 +123,12 @@ function cdn(opts: CDNPluginOptions = {}): Plugin[] {
       }
     }
   } 
-  return [{ ...transformPlugin(), apply }, { ...transformPresetModule(api), apply }]
+  return [{ ...transformPlugin(), apply }, { ...transformPresetModule(transform), apply }]
 }
 
 function external(opts: ExternalPluginOptions = {}): Plugin {
+  // Inspired by vite-plugin-external
+  const nodeModules = 'node_modules'
   const debug = _debug('vite-plugin-external')
   const { modules = [], include, exclude } = opts
   const filter = createFilter(include, exclude)
@@ -165,8 +158,13 @@ function external(opts: ExternalPluginOptions = {}): Plugin {
     },
     transform(code, id) {
       if (!filter(id)) return
-      if (!dependency.filter(code, id)) return
-      return transformWithBabel(code, dependency)
+      if (id.includes(nodeModules)) {
+        // coomonjs
+        const result = transformCJSRequire(code, dependency.dependency)
+        return result
+      }
+      // esm
+      if (dependency.filter(code, id)) return transformWithBabel(code, dependency) 
     },
     api: {
       filter,

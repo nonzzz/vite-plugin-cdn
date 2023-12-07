@@ -1,3 +1,9 @@
+## 0.15.3
+
+### Patches
+
+- Fix missing sourcemap when transform cjs.
+
 ## 0.15.2
 
 ### Patches
