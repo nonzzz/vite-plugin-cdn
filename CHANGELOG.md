@@ -1,3 +1,9 @@
+## 0.15.4
+
+### Patches
+
+- Fix vite's preprocess.
+
 ## 0.15.3
 
 ### Patches
