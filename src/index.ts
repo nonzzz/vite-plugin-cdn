@@ -10,6 +10,7 @@ import { transformWithBabel } from './transform'
 
 const debug = _debug('vite-plugin-cdn2')
 
+const NODE_MODULES = 'node_modules'
 // rs-module-lexer can't cover all platforms.
 // But it provide a wasm bindings. So we provide
 // a wrapper func to cover most of scence.
@@ -63,17 +64,24 @@ interface ExternalPluginAPI {
   dependency: ReturnType<typeof createDependency>
 }
 
-function transformPresetModule(transform: Plugin['transform']): Plugin {
+function transformPresetModule(api: ExternalPluginAPI): Plugin {
   return {
     name: 'vite-plugin-cdn2:presetModule',
-    transform
+    transform(code, id) {
+      if (!api.filter(id)) return
+      if (id.includes(NODE_MODULES)) {
+        const result = transformCJSRequire(code, api.dependency.dependency)
+        if (api.dependency.filter(code, id)) return transformWithBabel(code, api.dependency) 
+        return result
+      }
+    }
   }
 } 
 
 function cdn(opts: CDNPluginOptions = {}): Plugin[] {
   const { modules = [], url = jsdelivr, include = /\.(mjs|js|ts|vue|jsx|tsx)(\?.*|)$/, exclude, logLevel = 'warn', resolve: resolver, apply = 'build' } = opts
   const scanner = createScanner(modules)
-  const { api: _api, transform } = external({ modules: [], include, exclude })
+  const { api: _api } = external({ modules: [], include, exclude })
   const api = _api as ExternalPluginAPI
   const transformPlugin = (): Plugin => {
     return {
@@ -123,12 +131,11 @@ function cdn(opts: CDNPluginOptions = {}): Plugin[] {
       }
     }
   } 
-  return [{ ...transformPlugin(), apply }, { ...transformPresetModule(transform), apply }]
+  return [{ ...transformPlugin(), apply }, { ...transformPresetModule(api), apply }]
 }
 
 function external(opts: ExternalPluginOptions = {}): Plugin {
   // Inspired by vite-plugin-external
-  const nodeModules = 'node_modules'
   const debug = _debug('vite-plugin-external')
   const { modules = [], include, exclude } = opts
   const filter = createFilter(include, exclude)
@@ -158,7 +165,7 @@ function external(opts: ExternalPluginOptions = {}): Plugin {
     },
     transform(code, id) {
       if (!filter(id)) return
-      if (id.includes(nodeModules)) {
+      if (id.includes(NODE_MODULES)) {
         const result = transformCJSRequire(code, dependency.dependency)
         if (dependency.filter(code, id)) return transformWithBabel(code, dependency) 
         return result
