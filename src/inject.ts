@@ -6,7 +6,7 @@ import type { LinkSpare, ModuleInfo, ScriptSpare } from './interface'
 import type { ResolveOptions, SetupResult } from './resolve'
 
 function isScript(p: string) {
-  const { pathname } = new URL(p)
+  const { pathname } = new URL(p, 'https://www.example.com')
   return path.extname(pathname) === '.js' ? 'script' : 'link'
 }
 

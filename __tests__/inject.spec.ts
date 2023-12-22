@@ -1,7 +1,7 @@
 import test from 'ava'
 import { len } from '../src/shared'
 import { createInjectScript } from '../src/inject'
-import { jsdelivr } from '../src/url'
+import { jsdelivr } from '../src/resolver/jsdelivr'
 import type { TrackModule } from '../src'
 
 interface MockIIFEMdoule extends TrackModule {
@@ -16,9 +16,9 @@ test('inject', (t) => {
     relativeModule: 'fake.js',
     version: '0.0.0.',
     name: 'fake',
-    spare: ['fake.css', 'fake2.css', 'fake2.js'],
+    spare: [{ url: 'fake.css' }, { url: 'fake2.css' }, { url: 'fake3.js' }],
     bindings: new Set()
   })
-  const injectScript = createInjectScript(modules, jsdelivr)
-  t.is(len(injectScript.toTags()), 4)
+  const injectScript = createInjectScript(modules, jsdelivr())
+  t.is(len(injectScript.tagDescriptors), 4)
 })
