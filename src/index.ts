@@ -4,9 +4,9 @@ import _debug from 'debug'
 import { createScanner, getPackageExports, serializationExportsFields } from './scanner'
 import { createInjectScript } from './inject'
 import { isSupportThreads, len, transformCJSRequire } from './shared'
-import { jsdelivr } from './url'
 import type { CDNPluginOptions, ExternalPluginOptions, ModuleInfo } from './interface'
 import { transformWithBabel } from './transform'
+import { jsdelivr } from './resolver/jsdelivr'
 
 const debug = _debug('vite-plugin-cdn2')
 
@@ -79,7 +79,7 @@ function transformPresetModule(api: ExternalPluginAPI): Plugin {
 } 
 
 function cdn(opts: CDNPluginOptions = {}): Plugin[] {
-  const { modules = [], url = jsdelivr, include = /\.(mjs|js|ts|vue|jsx|tsx)(\?.*|)$/, exclude, logLevel = 'warn', resolve: resolver, apply = 'build' } = opts
+  const { modules = [], include = /\.(mjs|js|ts|vue|jsx|tsx)(\?.*|)$/, exclude, logLevel = 'warn', resolve = jsdelivr(), apply = 'build' } = opts
   const scanner = createScanner(modules)
   const { api: _api } = external({ modules: [], include, exclude })
   const api = _api as ExternalPluginAPI
@@ -122,11 +122,10 @@ function cdn(opts: CDNPluginOptions = {}): Plugin[] {
         return transformWithBabel(code, api.dependency)
       },
       transformIndexHtml(html) {
-        const inject = createInjectScript(scanner.dependencies, url, resolver)
-        inject.calledHook(opts.transform)
+        const inject = createInjectScript(scanner.dependencies, resolve)
         return {
           html,
-          tags: inject.toTags()
+          tags: inject.tagDescriptors
         }
       }
     }
@@ -185,6 +184,8 @@ external.getExternalPluginAPI = (plugins: Plugin[]): ExternalPluginAPI | undefin
 
 export { cdn, external }
 
+export { defineScript, defineLink } from './resolve'
+
 export default cdn
 
-export type { InjectVisitor, TrackModule, CDNPluginOptions, ExternalPluginOptions, ExternalModule } from './interface'
+export type { TrackModule, CDNPluginOptions, ExternalPluginOptions, ExternalModule } from './interface'

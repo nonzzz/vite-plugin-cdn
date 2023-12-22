@@ -25,16 +25,16 @@ $ npm install vite-plugin-cdn2 -D
 ```typescript
 // vite.config.ts
 
-import { defineConfig } from 'vite'
+import { defineConfig } from "vite";
 
-import { cdn } from 'vite-plugin-cdn2'
+import { cdn } from "vite-plugin-cdn2";
 
 export default defineConfig({
   plugins: [
     //  ... your plugin
-    cdn({ modules: ['vue'] })
-  ]
-})
+    cdn({ modules: ["vue"] }),
+  ],
+});
 ```
 
 ## Options
@@ -53,10 +53,9 @@ export default defineConfig({
 Type:
 
 ```ts
-
-type FilterPattern = ReadonlyArray<string | RegExp> | string | RegExp | null
-
+type FilterPattern = ReadonlyArray<string | RegExp> | string | RegExp | null;
 ```
+
 Default: `/\.(mjs|js|ts|vue|jsx|tsx)(\?.*|)$/`
 
 Include all assets matching any of these conditions.
@@ -66,10 +65,9 @@ Include all assets matching any of these conditions.
 Type:
 
 ```ts
-
-type FilterPattern = ReadonlyArray<string | RegExp> | string | RegExp | null
-
+type FilterPattern = ReadonlyArray<string | RegExp> | string | RegExp | null;
 ```
+
 Default: `undefined`
 
 Exclude all assets matching any of these conditions.
@@ -79,23 +77,22 @@ Exclude all assets matching any of these conditions.
 Type:
 
 ```ts
-
 interface TrackModule {
-  name: string
-  global?: string
-  spare?: Array<string> | string 
-  relativeModule?: string
+  name: string;
+  global?: string;
+  spare?: Array<string> | string;
+  relativeModule?: string;
 }
 
-type ResolverFunction = (p: string, extra: IIFEModuleInfo)=> string
+type ResolverFunction = (p: string, extra: IIFEModuleInfo) => string;
 
-interface IModule extends TrackModule{
-  resolve: string | ResolverFunction
+interface IModule extends TrackModule {
+  resolve: string | ResolverFunction;
 }
 
-type Modules = Array<IModule | string>
-
+type Modules = Array<IModule | string>;
 ```
+
 Default: `[]`
 
 Modules to be processed. Details see [Modules](./docs/Modules.md).
@@ -110,24 +107,22 @@ CDN url. Details see [URL](./docs/URL.md).
 
 ### transform
 
-Type: 
+Type:
 
 ```ts
-
 interface InjectVisitor {
-  script?: (node: ScriptNode)=> void
-  link?: (node: LinkNode)=> void
+  script?: (node: ScriptNode) => void;
+  link?: (node: LinkNode) => void;
 }
 
-type Trasnform = ()=> InjectVisitor
-
+type Trasnform = () => InjectVisitor;
 ```
 
 Default: `undefined`
 
 Transform is a overwrite.
 
-### logLevel 
+### logLevel
 
 Type: `slient` | `warn`
 
@@ -158,7 +153,6 @@ Thanks to [JetBrains](https://www.jetbrains.com/) for allocating free open-sourc
 <p align="right">
 <img width="250px" height="250px" src="https://resources.jetbrains.com/storage/products/company/brand/logos/jb_square.png" alt="JetBrains Black Box Logo logo.">
 </p>
-
 
 ### Document
 
