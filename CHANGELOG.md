@@ -1,3 +1,7 @@
+## 1.0.0
+
+A stable version.
+
 ## 0.15.4
 
 ### Patches
@@ -54,7 +58,6 @@
 
 - Fix can't work at monorepo.
 
-
 ## 0.12.4
 
 ### Patches
@@ -76,6 +79,7 @@
 ### Improves
 
 - Perf type DX (#19 #20)
+
 ### Patches
 
 - Fix `server` mode can't work with some libs.
@@ -83,7 +87,6 @@
 ### Credits
 
 @mengdaoshizhongxinyang @nonzzz
-
 
 ## 0.12.1
 
@@ -136,9 +139,8 @@
 - Support load submodule and join analyze. (Package.json "exports" module)
 
 Why we need it? Because more and more packages provide the exports fileld.So we should
-support it. In past we can't process like "import ReactDOM from 'react-dom/client'". But now 
+support it. In past we can't process like "import ReactDOM from 'react-dom/client'". But now
 we can do it.
-
 
 ## 0.9.3
 
