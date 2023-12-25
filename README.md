@@ -6,9 +6,7 @@
 <img src="https://img.shields.io/codecov/c/github/nonzzz/vite-plugin-cdn?style=for-the-badge" alt="Coverage Status" />
 </p>
 
-## Quick Start
-
-### Install
+## Install
 
 ```bash
 
@@ -20,7 +18,7 @@ $ npm install vite-plugin-cdn2 -D
 
 ```
 
-### Usage
+## Usage
 
 ```typescript
 // vite.config.ts
@@ -39,112 +37,14 @@ export default defineConfig({
 
 ## Options
 
-- [`include`](#include)
-- [`exclude`](#exclude)
-- [`modules`](#modules)
-- [`url`](#url)
-- [`transform`](#transform)
-- [`logLevel`](#logLevel)
-- [`resolve`](#resolve)
-- [`apply`](#apply)
-
-### include
-
-Type:
-
-```ts
-type FilterPattern = ReadonlyArray<string | RegExp> | string | RegExp | null;
-```
-
-Default: `/\.(mjs|js|ts|vue|jsx|tsx)(\?.*|)$/`
-
-Include all assets matching any of these conditions.
-
-### exclude
-
-Type:
-
-```ts
-type FilterPattern = ReadonlyArray<string | RegExp> | string | RegExp | null;
-```
-
-Default: `undefined`
-
-Exclude all assets matching any of these conditions.
-
-### modules
-
-Type:
-
-```ts
-interface TrackModule {
-  name: string;
-  global?: string;
-  spare?: Array<string> | string;
-  relativeModule?: string;
-}
-
-type ResolverFunction = (p: string, extra: IIFEModuleInfo) => string;
-
-interface IModule extends TrackModule {
-  resolve: string | ResolverFunction;
-}
-
-type Modules = Array<IModule | string>;
-```
-
-Default: `[]`
-
-Modules to be processed. Details see [Modules](./docs/Modules.md).
-
-### url
-
-Type: string
-
-Default: `https://cdn.jsdelivr.net/npm/`
-
-CDN url. Details see [URL](./docs/URL.md).
-
-### transform
-
-Type:
-
-```ts
-interface InjectVisitor {
-  script?: (node: ScriptNode) => void;
-  link?: (node: LinkNode) => void;
-}
-
-type Trasnform = () => InjectVisitor;
-```
-
-Default: `undefined`
-
-Transform is a overwrite.
-
-### logLevel
-
-Type: `slient` | `warn`
-
-Default: `warn`
-
-Adjust console output verbosity.
-
-### resolve
-
-Type: `ResolverFunction`
-
-Default: `undefined`
-
-A global url parser.
-
-### apply
-
-Type: `build` | `serve`
-
-Default: `build`
-
-Same as vite command
+| params     | type                        | default                                     | description                                          |
+| ---------- | --------------------------- | ------------------------------------------- | ---------------------------------------------------- |
+| `include`  | `FilterPattern`             | `/\.(mjs\|js\|ts\|vue\|jsx\|tsx)(\?.*\|)$/` | Include all assets matching any of these conditions. |
+| `exlcude`  | `FilterPattern` ß           | `-`                                         | Exclude all assets matching any of these conditions. |
+| `modules`  | `Array<IModule \| string> ` | `[]`                                        | Should convert module.                               |
+| `logLevel` | `slient\|warn`              | `warn`                                      | Adjust console output verbosity.                     |
+| `resolve`  | `ResolveOptions`            | `jsdelivr plugin`                           | URL parser injected into the page.                   |
+| `apply`    | `string`                    | `build`                                     | Same as vite apply.                                  |
 
 ### Acknowledgements
 
