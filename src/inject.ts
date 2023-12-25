@@ -31,7 +31,7 @@ function createTagDescriptor(options: SetupResult): HtmlTagDescriptor {
 class InjectScript {
   private _tagDescriptors: Array<HtmlTagDescriptor>
   constructor(modules: Map<string, ModuleInfo>, resolve: ResolveOptions) {
-    is(!resolve || !resolve.name, '[vite-plugin-cdn2]: missing resolve')
+    is(!!resolve || !!resolve.name, '[vite-plugin-cdn2]: missing resolve.')
     this._tagDescriptors = this.prepareSource(modules, resolve)
   }
 
