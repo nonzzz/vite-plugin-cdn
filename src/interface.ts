@@ -55,12 +55,9 @@ export type ResolverFunction = (p: string, extra: IIFEModuleInfo) => string
 export interface ModuleInfo extends IIFEModuleInfo {
   bindings: Set<string>
   code?: string
-  resolve?: string | ResolverFunction
 }
 
-export interface IModule extends TrackModule {
-  resolve?: string | ResolverFunction
-}
+export type IModule = TrackModule
 
 export type ExternalModule = Required<Module> & {
   aliases?: Array<string>

@@ -4,6 +4,7 @@ import path from 'path'
 import type { HtmlTagDescriptor } from 'vite'
 import type { LinkSpare, ModuleInfo, ScriptSpare } from './interface'
 import type { ResolveOptions, SetupResult } from './resolve'
+import { is } from './shared'
 
 function isScript(p: string) {
   const { pathname } = new URL(p, 'https://www.example.com')
@@ -30,7 +31,7 @@ function createTagDescriptor(options: SetupResult): HtmlTagDescriptor {
 class InjectScript {
   private _tagDescriptors: Array<HtmlTagDescriptor>
   constructor(modules: Map<string, ModuleInfo>, resolve: ResolveOptions) {
-    if (!resolve || !resolve.name) throw new Error('[vite-plugin-cdn2]: missing resolve')
+    is(!resolve || !resolve.name, '[vite-plugin-cdn2]: missing resolve')
     this._tagDescriptors = this.prepareSource(modules, resolve)
   }
 
