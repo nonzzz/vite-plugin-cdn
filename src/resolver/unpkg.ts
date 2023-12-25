@@ -12,7 +12,7 @@ export function unpkg(options: HTMLTagDescriptor = {}) {
       return {
         url: url.href,
         injectTo,
-        attrs
+        attrs: { ...attrs }
       }
     }
   })

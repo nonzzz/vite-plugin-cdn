@@ -1,19 +1,21 @@
+import path from 'path'
 import { defineResolve } from '../resolve'
 import type { HTMLTagDescriptor } from '../resolve'
 
-export function jsdelivr(options: HTMLTagDescriptor = {}) {
+export function bootcdn(options: HTMLTagDescriptor = {}) {
   const { injectTo = 'head-prepend', attrs = {} } = options
-  const baseURL = 'https://cdn.jsdelivr.net/npm/'
+  const baseURL = 'https://cdn.bootcdn.net/ajax/libs/'
   return defineResolve({
-    name: 'resolve:jsdelivr',
+    name: 'resolve:bootcdn',
     setup({ extra }) {
       const { version, name, relativeModule } = extra
-      const url = new URL(`${name}@${version}/${relativeModule}`, baseURL)
+      const baseName = path.basename(relativeModule)
+      const url = new URL(`${name}/${version}/${baseName}`, baseURL)
       return {
         url: url.href,
         injectTo,
         attrs: { ...attrs }
-      }
+      }   
     }
   })
 }

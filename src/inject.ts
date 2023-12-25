@@ -40,7 +40,6 @@ class InjectScript {
 
   private prepareSource(modules: Map<string, ModuleInfo>, resolve: ResolveOptions) {
     const container: Array<HtmlTagDescriptor> = []
-
     // Inherit the insertion postion of the parent node.
     const traverse = (spare: string | Array<ScriptSpare | LinkSpare>, injectTo: HtmlTagDescriptor['injectTo']) => {
       if (typeof spare === 'string') {

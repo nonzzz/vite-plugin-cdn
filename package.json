@@ -33,13 +33,10 @@
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
     },
-    "./resolver/*.mjs": {
+    "./resolver/*": {
       "import": "./dist/resolver/*.mjs",
-      "types": "./dist/resolver/*.d.mts"
-    },
-    "./resolver/*.js": {
       "require": "./dist/resolver/*.js",
-      "types": "./dist/resolver/*.d.ts"
+      "types": "./dist/resolver/*.d.mts"
     },
     "./*": "./*"
   },
