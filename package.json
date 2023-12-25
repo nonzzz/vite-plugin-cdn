@@ -34,9 +34,19 @@
       "require": "./dist/index.js"
     },
     "./resolver/*": {
+      "types": "./dist/resolver/*.d.ts",
       "import": "./dist/resolver/*.mjs",
-      "require": "./dist/resolver/*.js",
-      "types": "./dist/resolver/*.d.mts"
+      "require": "./dist/resolver/*.js"
+    },
+    "./resolve": {
+      "types": "./dist/resolve.d.ts",
+      "import": "./dist/resolve.mjs",
+      "require": "./dist/resolve.js"
+    },
+    "./scanner": {
+      "types": "./dist/scanner.d.ts",
+      "import": "./dist/scanner.mjs",
+      "require": "./dist/scanner.js"
     },
     "./*": "./*"
   },
