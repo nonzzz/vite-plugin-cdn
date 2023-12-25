@@ -14,12 +14,6 @@ test('scanner failed', (t) => {
   t.is(scanner.dependencies.has('vue'), true)
 })
 
-test('scanner with resolver', (t) => {
-  const scanner = createScanner([{ name: 'vue', resolve: (p) => p }])
-  scanner.scanAllDependencies()
-  t.is(typeof scanner.dependencies.get('vue').resolve === 'function', true)
-})
-
 test('scanner with aliases', (t) => {
   const scanner = createScanner([{ name: 'vue', aliases: ['dist'] }])
   scanner.scanAllDependencies()

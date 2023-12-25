@@ -1,4 +1,37 @@
 import type { FilterPattern } from '@rollup/pluginutils'
+import type { ResolveOptions } from './resolve'
+
+export type ScriptAttributes = Partial<
+  Pick<
+    HTMLScriptElement,
+    'async' | 'crossOrigin' | 'defer' | 'integrity' | 'noModule' | 'nonce' | 'referrerPolicy' | 'type'
+  >
+>
+
+export type LinkAttrobites = Partial<
+  Pick<
+    HTMLLinkElement,
+    | 'as'
+    | 'crossOrigin'
+    | 'hreflang'
+    | 'imageSizes'
+    | 'imageSrcset'
+    | 'integrity'
+    | 'media'
+    | 'referrerPolicy'
+    | 'rel'
+    | 'title'
+    | 'type'
+  >
+>
+
+export type ScriptSpare = ScriptAttributes & {
+  url: string
+}
+
+export type LinkSpare = LinkAttrobites & {
+  url: string
+}
 
 export interface Module {
   name: string
@@ -6,7 +39,7 @@ export interface Module {
 }
 
 export interface TrackModule extends Module {
-  spare?: Array<string> | string
+  spare?: Array<ScriptSpare | LinkSpare> | string
   relativeModule?: string
   aliases?: Array<string>
 }
@@ -22,63 +55,12 @@ export type ResolverFunction = (p: string, extra: IIFEModuleInfo) => string
 export interface ModuleInfo extends IIFEModuleInfo {
   bindings: Set<string>
   code?: string
-  resolve?: string | ResolverFunction
 }
 
-export interface IModule extends TrackModule {
-  resolve?: string | ResolverFunction
-}
+export type IModule = TrackModule
 
 export type ExternalModule = Required<Module> & {
   aliases?: Array<string>
-}
-
-export interface Serialization {
-  url?: Set<string>
-  type?: string
-  name: string
-  tag: 'link' | 'script'
-  extra: Record<string, any>
-}
-
-export type ScriptAttributes = Partial<
-  Pick<
-    HTMLScriptElement,
-    'async' | 'crossOrigin' | 'defer' | 'integrity' | 'noModule' | 'nonce' | 'referrerPolicy' | 'type'
-  >
->
-
-export type LinkAttrobites = Partial<
-  Pick<
-    HTMLLinkElement,
-    | 'as'
-    | 'crossOrigin'
-    | 'href'
-    | 'hreflang'
-    | 'imageSizes'
-    | 'imageSrcset'
-    | 'integrity'
-    | 'media'
-    | 'referrerPolicy'
-    | 'rel'
-    | 'title'
-    | 'type'
-  >
->
-
-export type ScriptNode = ScriptAttributes &
-Omit<Serialization, 'tag' | 'type'> & {
-  tag: 'script'
-}
-
-export type LinkNode = LinkAttrobites &
-Omit<Serialization, 'tag' | 'type'> & {
-  tag: 'link'
-}
-
-export interface InjectVisitor {
-  script?: (node: ScriptNode) => void
-  link?: (node: LinkNode) => void
 }
 
 type Pretty<T> = {
@@ -90,12 +72,10 @@ type Pretty<T> = {
 
 export type CDNPluginOptions = Pretty<{
   modules?: Array<IModule | string>
-  url?: string
-  transform?: () => InjectVisitor
   include?: FilterPattern
   exclude?: FilterPattern
   logLevel?: 'slient' | 'warn'
-  resolve?: ResolverFunction
+  resolve?: ResolveOptions
   apply?: 'build' | 'serve',
 }>
 

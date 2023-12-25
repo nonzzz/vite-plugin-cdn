@@ -6,7 +6,7 @@ import worker_threads from 'worker_threads'
 import type { MessagePort } from 'worker_threads'
 import { tryScanGlobalName } from './transform'
 import { MAX_CONCURRENT, _import, createConcurrentQueue, is, len, lookup } from './shared'
-import type { IIFEModuleInfo, IModule, Module, ModuleInfo, ResolverFunction, TrackModule } from './interface'
+import type { IIFEModuleInfo, IModule, Module, ModuleInfo, TrackModule } from './interface'
 
 // TODO
 // https://github.com/nodejs/node/issues/43304
@@ -30,7 +30,6 @@ interface WorkerData {
 
 interface ScannerModule {
   modules: Array<TrackModule>
-  resolvers: Record<string, string | ResolverFunction>
 }
 
 interface ThreadMessage {
@@ -59,12 +58,6 @@ function createWorkerThreads(scannerModule: ScannerModule, defaultWd: string) {
     if (message.id !== id) throw new Error(`Internal error: Expected id ${id} but got id ${message.id}`)
     if (message.error) throw message.error
     const { bindings, failedModules } = message
-    // Can't copy function reference. So we should bind it again from resolvers
-    bindings.forEach((meta, moduleName) => {
-      if (scannerModule.resolvers[moduleName]) {
-        meta.resolve = scannerModule.resolvers[moduleName]
-      }
-    })
     return { dependencies: bindings, failedModules }
   }
   return runSync()
@@ -218,7 +211,6 @@ class Scanner {
   private serialization(input: Array<IModule | string>) {
     is(Array.isArray(input), 'vite-plugin-cdn2: option module must be array')
     const modules: Array<IModule> = []
-    const resolvers: Record<string, string | ResolverFunction> = {}
     const bucket = new Set<string>()
     for (const module of input) {
       if (typeof module === 'string') {
@@ -228,14 +220,10 @@ class Scanner {
         continue
       }
       if (!module.name || bucket.has(module.name)) continue
-      const { resolve, ...rest } = module
-      if (resolve) {
-        resolvers[rest.name] = resolve
-      }
-      modules.push(rest)
+      modules.push(module)
       bucket.add(module.name)
     }
-    return { modules, resolvers }
+    return { modules }
   }
 }
 

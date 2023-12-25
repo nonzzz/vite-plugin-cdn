@@ -33,17 +33,17 @@
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
     },
-    "./url.js": {
-      "types": "./dist/url.d.ts",
-      "import": "./dist/url.mjs",
-      "require": "./dist/url.js"
+    "./resolver/*": {
+      "import": "./dist/resolver/*.mjs",
+      "require": "./dist/resolver/*.js",
+      "types": "./dist/resolver/*.d.mts"
     },
     "./*": "./*"
   },
   "typesVersions": {
     "*": {
-      "url.js": [
-        "./dist/url.d.ts"
+      "*": [
+        "./dist/*"
       ]
     }
   },
