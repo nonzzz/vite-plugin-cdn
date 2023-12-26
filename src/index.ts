@@ -122,7 +122,9 @@ function cdn(opts: CDNPluginOptions = {}): Plugin[] {
         return transformWithBabel(code, api.dependency)
       },
       transformIndexHtml(html) {
+        debug('start transformIndexHtml')
         const inject = createInjectScript(scanner.dependencies, resolve)
+        debug('transformIndexHtml Done', inject.tagDescriptors)
         return {
           html,
           tags: inject.tagDescriptors

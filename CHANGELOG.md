@@ -1,3 +1,9 @@
+## 1.1.0
+
+### Features
+
+- Expose resolve.
+
 ## 1.0.0
 
 A stable version.

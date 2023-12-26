@@ -46,3 +46,7 @@ moudles: [{ name: "element-plus", aliases: ["es", "lib"] }];
 > How to use it with React?
 
 - Usually most of libraries will provide jsdelivr or unpkg filed but if isn't. You should set `relativeModule` for it.
+
+> Why i can't find any module?
+
+- If you‘re a pnpm user you need to explicitly install the peer dependencies
