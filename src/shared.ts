@@ -25,9 +25,11 @@ export function isSupportThreads(): [boolean, string] {
   return [true, `${major}.${minor}`]
 }
 
-export function is(condit: boolean, message: string) {
+export function is(condit: boolean, message: string, code?: number | string) {
   if (!condit) {
-    throw new Error(message)
+    const error = new Error(message)
+    if (code !== undefined) (error as any).code = code
+    throw error
   }
 }
 

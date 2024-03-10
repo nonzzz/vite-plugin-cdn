@@ -1,6 +1,8 @@
 import { createFilter } from '@rollup/pluginutils'
 import type { Plugin } from 'vite'
+import { searchForWorkspaceRoot } from 'vite'
 import _debug from 'debug'
+import { parse } from 'es-module-lexer'
 import { createScanner, getPackageExports, serializationExportsFields } from './scanner'
 import { createInjectScript } from './inject'
 import { isSupportThreads, len, transformCJSRequire } from './shared'
@@ -11,30 +13,13 @@ import { jsdelivr } from './resolver/jsdelivr'
 const debug = _debug('vite-plugin-cdn2')
 
 const NODE_MODULES = 'node_modules'
-// rs-module-lexer can't cover all platforms.
-// But it provide a wasm bindings. So we provide
-// a wrapper func to cover most of scence.
-// WASM support at least node15
-
-async function createRsModuleLexer() {
-  try {
-    const { parse } = (await import('rs-module-lexer')).default
-    return parse
-  } catch (error) {
-    const { parse } = await import('@xn-sakina/rml-wasm').catch(() => {
-      throw new Error('rs-module-lexer can\'t work on you current machine.')
-    })
-    return parse
-  }
-}
 
 function createDependency() {
   const dependency: Record<string, ModuleInfo> = {}
 
-  const filter = (code: string, id: string, dependencyWithAlias: Record<string, string>, lex: Awaited<ReturnType<typeof createRsModuleLexer>>) => {
-    const { output } = lex({ input: [{ filename: id, code }] })
-    if (!len(output)) return false
-    const { imports } = output[0]
+  const filter = (code: string, id: string, dependencyWithAlias: Record<string, string>) => {
+    const [imports] = parse(code, id)
+    if (!len(imports)) return false
     const modules = Array.from(new Set([...imports.map(i => i.n)]))
     for (const m of modules) {
       if (dependencyWithAlias[m]) return true
@@ -45,7 +30,6 @@ function createDependency() {
 
   return {
     dependency,
-    lex: null,
     get dependencyWithAlias() {
       const traverse = (aliases: string[], name: string) => aliases.reduce((acc, cur) => ({ ...acc, [cur]: name }), {})
       return Object.values(this.dependency).reduce((acc, cur) => {
@@ -54,7 +38,7 @@ function createDependency() {
       }, {})
     },
     filter: function (code: string, id: string) {
-      return filter(code, id, this.dependencyWithAlias, this.lex)
+      return filter(code, id, this.dependencyWithAlias)
     }
   }
 }
@@ -92,16 +76,14 @@ function cdn(opts: CDNPluginOptions = {}): Plugin[] {
         const [isSupport, version] = isSupportThreads()
         try {
           if (!isSupport) throw new Error(`vite-plugin-cdn2 can't work with nodejs ${version}.`)
-          const esModuleLexer = await createRsModuleLexer()
-          api.dependency.lex = esModuleLexer
-          const defaultWd = config.root
+          const defaultWd = searchForWorkspaceRoot(config.root)
           scanner.setDefaultWd(defaultWd)
           debug('start scanning')
           scanner.scanAllDependencies()
           debug('scanning done', scanner.dependencies)
           api.dependency.dependency = Object.fromEntries(scanner.dependencies)
           if (logLevel === 'warn') {
-            scanner.failedModules.forEach((errorMessage, name) => config.logger.error(`vite-plugin-cdn2: ${name} ${errorMessage ? errorMessage : 'resolved failed.Please check it.'}`))
+            scanner.failedMessages.forEach(msg => config.logger.error(msg))
           }
           // work for serve mode
           // https://vitejs.dev/config/dep-optimization-options.html
@@ -146,8 +128,6 @@ function external(opts: ExternalPluginOptions = {}): Plugin {
     name: 'vite-plugin-external',
     async buildStart() {
       try {
-        const esModuleLexer = await createRsModuleLexer()
-        dependency.lex = esModuleLexer
         debug('start check modules')
         for (const module of modules) {
           if (!module.global) throw new Error(`vite-plugin-external: missing global for module ${module.name}`)
@@ -190,4 +170,4 @@ export { defineScript, defineLink } from './resolve'
 
 export default cdn
 
-export type { TrackModule, CDNPluginOptions, ExternalPluginOptions, ExternalModule } from './interface'
+export type { IModule, CDNPluginOptions, ExternalPluginOptions, ExternalModule } from './interface'

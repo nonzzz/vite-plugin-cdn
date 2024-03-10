@@ -6,7 +6,7 @@ import worker_threads from 'worker_threads'
 import type { MessagePort } from 'worker_threads'
 import { tryScanGlobalName } from './transform'
 import { MAX_CONCURRENT, _import, createConcurrentQueue, is, len, lookup } from './shared'
-import type { IIFEModuleInfo, IModule, Module, ModuleInfo, TrackModule } from './interface'
+import type { IModule, Module, ModuleInfo } from './interface'
 
 // TODO
 // https://github.com/nodejs/node/issues/43304
@@ -29,12 +29,12 @@ interface WorkerData {
 }
 
 interface ScannerModule {
-  modules: Array<TrackModule>
+  modules: Array<IModule>
 }
 
 interface ThreadMessage {
   bindings: Map<string, ModuleInfo>, 
-  failedModules: Map<string, string>
+  failedMessages: string[]
   id: number
   error: Error | AggregateError
 }
@@ -57,8 +57,8 @@ function createWorkerThreads(scannerModule: ScannerModule, defaultWd: string) {
     const { message }: { message: ThreadMessage } = worker_threads.receiveMessageOnPort(mainPort)
     if (message.id !== id) throw new Error(`Internal error: Expected id ${id} but got id ${message.id}`)
     if (message.error) throw message.error
-    const { bindings, failedModules } = message
-    return { dependencies: bindings, failedModules }
+    const { bindings, failedMessages } = message
+    return { dependencies: bindings, failedMessages }
   }
   return runSync()
 }
@@ -96,82 +96,55 @@ export async function getPackageExports(...argvs: [string | Module, string?]) {
   return bindings
 }
 
-async function tryResolveModule(
-  module: IModule,
-  dependenciesMap: Map<string, ModuleInfo>,
-  failedModules: Map<string, string>,
-  defaultWd: string
-) {
-  const { name: moduleName, relativeModule, aliases, ...rest } = module
+async function tryResolvePackage(module: IModule, defaultWd: string, handler: (moduleInfo: ModuleInfo, errorMessage: string) => void) {
+  const { name: pkgName, ...rest } = module
+  let errorMessage = ''
+  const moduleInfo: ModuleInfo = Object.create(null)
   try {
-    const modulePath = _require.resolve(moduleName, { paths: [defaultWd] })
-    const packageJsonPath = lookup(modulePath, 'package.json')
-    const str = await fsp.readFile(packageJsonPath, 'utf8')
-    const packageJSON: IIFEModuleInfo = JSON.parse(str)
-    const { version, name, unpkg, jsdelivr } = packageJSON
-    const meta: ModuleInfo = Object.create(null)
-    // Most of package has jsdelivr or unpkg field
-    // but a small part is not. so we should accept user define.
-    const iifeRelativePath = relativeModule || jsdelivr || unpkg 
-    if (!iifeRelativePath) throw new Error('try resolve file failed.')
-    if (rest.global) {
-      Object.assign(meta, { name, version, relativeModule: iifeRelativePath, aliases: serializationExportsFields(name, aliases), ...rest })
+    const pkgPath = _require.resolve(pkgName, { paths: [defaultWd] })
+    const pkgJsonPath = _require.resolve(path.join(pkgName, 'package.json'), { paths: [defaultWd] })
+    const { version, name, unpkg, jsdelivr } = _require(pkgJsonPath)
+    const iifeRelativePath = rest.relativeModule || jsdelivr || unpkg
+    is(!!iifeRelativePath, `[scanner error]: can't find any iife file from package '${pkgName}',please check it.`, 'normal')
+    if ('global' in rest) {
+      Object.assign(moduleInfo, { ...rest, name, version, relativeModule: iifeRelativePath, aliases: serializationExportsFields(name, rest.aliases) })
     } else {
-      const iifeFilePath = lookup(packageJsonPath, iifeRelativePath)
+      const iifeFilePath = lookup(pkgJsonPath, iifeRelativePath)
       const code = await fsp.readFile(iifeFilePath, 'utf8')
-      Object.assign(meta, { name, version, code, relativeModule: iifeRelativePath, aliases: serializationExportsFields(name, aliases), ...rest })
+      const global = await tryScanGlobalName(code)
+      is(!!global, `[scanner error]: unable to guess the global name form '${pkgName}', please enter manually.`, 'normal')
+      Object.assign(moduleInfo, { ...rest, name, version, relativeModule: iifeRelativePath, aliases: serializationExportsFields(name, rest.aliases), global })
     }
-    const bindings = await getPackageExports(modulePath)
-    dependenciesMap.set(name, { ...meta, bindings })
+    moduleInfo.bindings = await getPackageExports(pkgPath)
   } catch (error) {
-    const message = (() => {
-      if (error instanceof Error) {
-        if ('code' in error) {
-          if (error.code === 'MODULE_NOT_FOUND') return 'can\'t find module.'
-        }
-        return error.message
-      }
-      return error
-    })()
-    failedModules.set(moduleName, message)
+    errorMessage = `[scanner error]: invalid package '${pkgName}'.`
+    if (error instanceof Error && 'code' in error) {
+      if (error.code === 'normal') errorMessage = error.message
+    }
   }
+  handler(moduleInfo, errorMessage)
 }
 
 function startSyncThreads() {
   if (!worker_threads.workerData.internalThread) return
   const { workerPort, scannerModule, defaultWd } = worker_threads.workerData as WorkerData
   const { parentPort } = worker_threads
-  const dependenciesMap: Map<string, ModuleInfo> = new Map()
-  const failedModules: Map<string, string> = new Map()
+  const bindings: Map<string, ModuleInfo> = new Map()
+  const failedMessages: string[] = []
   parentPort?.on('message', (msg) => {
     (async () => {
       const { id, sharedBuffer } = msg
       const sharedBufferView = new Int32Array(sharedBuffer)
+      const queue = createConcurrentQueue(MAX_CONCURRENT)
       try {
-        const bindings: Map<string, ModuleInfo> = new Map()
-        const queue = createConcurrentQueue(MAX_CONCURRENT)
         for (const module of scannerModule) {
-          queue.enqueue(() => tryResolveModule(module, dependenciesMap, failedModules, defaultWd))
+          queue.enqueue(() => tryResolvePackage(module, defaultWd, (info, msg) => {
+            if (msg) return failedMessages.push(msg)
+            bindings.set(info.name, info)
+          }))
         }
         await queue.wait()
-        for (const module of scannerModule) {
-          const { name } = module
-          if (dependenciesMap.has(name)) {
-            const { code, ...rest } = dependenciesMap.get(name)
-            if (!code) {
-              bindings.set(name, rest)
-              continue
-            }
-            const globalName = await tryScanGlobalName(code)
-            if (!globalName) {
-              failedModules.set(name, 'try resolve global name failed.')
-            } else {
-              bindings.set(name, { ...rest, global: globalName })
-            }
-          }
-        }
-        dependenciesMap.clear()
-        workerPort.postMessage({ bindings, id, failedModules })
+        workerPort.postMessage({ bindings, id, failedMessages })
       } catch (error) {
         workerPort.postMessage({ error, id })
       }
@@ -188,12 +161,12 @@ if (worker_threads.workerData?.internalThread) {
 class Scanner {
   modules: Array<IModule | string>
   dependencies: Map<string, ModuleInfo>
-  failedModules: Map<string, string>
+  failedMessages: string[]
   private defaultWd: string
   constructor(modules: Array<IModule | string>) {
     this.modules = modules
     this.dependencies = new Map()
-    this.failedModules = new Map()
+    this.failedMessages = []
     this.defaultWd = process.cwd()
   }
 
@@ -203,9 +176,9 @@ class Scanner {
 
   public scanAllDependencies() {
     // we won't throw any exceptions inside this task.
-    const res = createWorkerThreads(this.serialization(this.modules), this.defaultWd)
-    this.dependencies = res.dependencies
-    this.failedModules = res.failedModules
+    const { failedMessages, dependencies } = createWorkerThreads(this.serialization(this.modules), this.defaultWd)
+    this.dependencies = dependencies
+    this.failedMessages = failedMessages
   }
 
   private serialization(input: Array<IModule | string>) {

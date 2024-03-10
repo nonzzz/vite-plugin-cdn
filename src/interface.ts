@@ -38,13 +38,13 @@ export interface Module {
   global?: string
 }
 
-export interface TrackModule extends Module {
+export interface IModule extends Module {
   spare?: Array<ScriptSpare | LinkSpare> | string
   relativeModule?: string
   aliases?: Array<string>
 }
 
-export interface IIFEModuleInfo extends TrackModule {
+export interface IIFEModuleInfo extends IModule {
   version: string
   unpkg?: string
   jsdelivr?: string
@@ -56,8 +56,6 @@ export interface ModuleInfo extends IIFEModuleInfo {
   bindings: Set<string>
   code?: string
 }
-
-export type IModule = TrackModule
 
 export type ExternalModule = Required<Module> & {
   aliases?: Array<string>
