@@ -7,5 +7,6 @@ export const tsup: Options = {
   clean: true,
   shims: true,
   minify: true,
+  external: ['vite'],
   noExternal: ['@nolyfill/es-aggregate-error']
 }
