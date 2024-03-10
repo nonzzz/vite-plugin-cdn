@@ -2,9 +2,9 @@ import test from 'ava'
 import { len } from '../src/shared'
 import { createInjectScript } from '../src/inject'
 import { jsdelivr } from '../src/resolver/jsdelivr'
-import type { TrackModule } from '../src'
+import type { IModule } from '../src'
 
-interface MockIIFEMdoule extends TrackModule {
+interface MockIIFEMdoule extends IModule {
   relativeModule: string
   version: string
   bindings: Set<string>

@@ -10,7 +10,7 @@ test('scanner dependencies', (t) => {
 test('scanner failed', (t) => {
   const scanner = createScanner(['vue', 'react'])
   scanner.scanAllDependencies()
-  t.is(scanner.failedModules.has('react'), true)
+  t.is(scanner.failedMessages[0], '[scanner error]: can\'t find any iife file from package \'react\',please check it.')
   t.is(scanner.dependencies.has('vue'), true)
 })
 
