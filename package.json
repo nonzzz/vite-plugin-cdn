@@ -89,6 +89,7 @@
   "dependencies": {
     "@babel/core": "^7.22.5",
     "@rollup/pluginutils": "^5.0.2",
+    "@swc/core": "^1.4.6",
     "debug": "^4.3.4",
     "es-module-lexer": "^1.4.1",
     "magic-string": "^0.30.5"

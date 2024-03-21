@@ -1,0 +1,18 @@
+[package]
+
+name = "swc-global-external-visitor"
+description = "SWC visitor for transform module to external"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+serde = { version = "1.0.197", features = ["derive"] }
+swc_core = { version = "0.90.18", features = [
+    "ecma_parser",
+    "ecma_plugin_transform",
+    "ecma_utils",
+] }
+
+[dev-dependencies]
+serde_json = "1.0.114"
+testing = "0.35.20"

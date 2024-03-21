@@ -1,0 +1,6 @@
+[package]
+
+name = "swc-plugin-global-external"
+description = "SWC plugin for transform module to external"
+version = "0.0.0"
+edition = "2021"
