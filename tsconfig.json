@@ -9,12 +9,8 @@
     "lib": ["esnext", "dom"],
     "resolveJsonModule": true,
     "module": "ESNext",
-    "moduleResolution": "node",
+    "strict": true,
+    "moduleResolution": "bundler",
     "outDir": "dist"
-  },
-  "ts-node": {
-    "compilerOptions": {
-      "module": "CommonJS"
-    }
   }
 }
